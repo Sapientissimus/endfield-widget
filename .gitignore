@@ -1,0 +1,29 @@
+# Local builds and release downloads
+*.exe
+*.dll
+*.pdb
+*.zip
+/dist/
+/.test-output/
+/work/
+/bin/
+/obj/
+
+# Personal profiles, credentials and runtime output
+.env
+.env.*
+**/profile*/
+**/settings.json
+**/settings.json.*
+**/sanity.json
+**/failure.json
+**/automatic-start.json
+*.log
+*.bak
+*.tmp
+
+# Editors
+.vs/
+.vscode/
+*.user
+*.suo

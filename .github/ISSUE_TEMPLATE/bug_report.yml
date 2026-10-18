@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a problem with Endfield Widget.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search the [existing issues](https://github.com/Sapientissimus/endfield-widget/issues) before submitting a report.
+
+        **This report will be public.** Please remove account tokens, account identifiers, full local profiles and other personal information from text, screenshots and attachments.
+
+        For a suspected security vulnerability, please use [private vulnerability reporting](https://github.com/Sapientissimus/endfield-widget/security/advisories/new) instead.
+
+  - type: input
+    id: app_version
+    attributes:
+      label: Application version
+      description: Which Endfield Widget version are you using?
+      placeholder: "For example: 1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows version
+      description: Please include the Windows edition and version. You can find them in Settings > System > About.
+      placeholder: "For example: Windows 11, version 25H2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What actions lead to the problem? If it happens intermittently, please describe when it occurs.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Please include any visible error message.
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Relevant settings
+      description: If relevant, please include the interface language, game server, layout, scale, monitor arrangement or Windows time zone.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_details
+    attributes:
+      label: Screenshots and diagnostic report
+      description: Optional. A diagnostic report exported from the application's settings can help. Please review attachments for personal information before uploading; do not attach your local profile or tokens.
+    validations:
+      required: false

@@ -102,6 +102,10 @@ Settings and caches are stored separately in `%LOCALAPPDATA%\EndfieldWidget`. Th
 
 Close the application from its tray menu before replacing the executable. Settings remain in the local profile folder. A diagnostic report can be exported from settings for troubleshooting; it excludes credentials and account identifiers.
 
+## Support
+
+Please use the [bug report form](https://github.com/Sapientissimus/endfield-widget/issues/new?template=bug_report.yml) for application problems. For suspected security vulnerabilities, please follow the private reporting instructions in [SECURITY.md](SECURITY.md).
+
 ## Build and test
 
 From the repository root in Windows PowerShell:

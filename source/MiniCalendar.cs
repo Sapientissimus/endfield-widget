@@ -50,11 +50,9 @@ namespace EndfieldWidget {
     T CalendarFind<T>(string name) where T:class{return calendarDialog==null?null:calendarDialog.FindName(name) as T;}
     void SelectCalendarDay(DateTime day) {
       if(day.Year>9998)return;
-      var previousMonth=calendarMonth;
       calendarDay=day.Date;calendarMonth=new DateTime(day.Year,day.Month,1);
       if(calendarSelectedId!=null && calendarSnapshot!=null && !calendarSnapshot.OnDay(day).Any(e=>e.Id==calendarSelectedId))calendarSelectedId=null;
       RenderCalendar(false);
-      if(previousMonth!=calendarMonth)AnimateCalendarChange(calendarMonth>previousMonth?1:-1);
     }
     void PaintBannerEnd(DateTimeOffset now) {
       var current=BannerClient.Select(bannerState,now,config.BannerRegion=="Asia");var end=BannerClient.End(current,config.BannerRegion=="Asia");bool show=end.HasValue && end>now;
@@ -121,7 +119,7 @@ namespace EndfieldWidget {
       RenderCalendar(false);dialog.Show();LayoutCalendar();
     }
     void ReleaseCalendar(Window dialog) {
-      CalendarMotion.Stop(dialog.FindName("CalendarMonthPane") as FrameworkElement);CalendarMotion.Stop(dialog.FindName("CalendarAgendaPane") as FrameworkElement);ReleaseCalendarDetails();
+      ReleaseCalendarDetails();
       var search=dialog.FindName("CalendarSearch") as TextBox;if(search!=null)calendarQuery=search.Text;
       var picker=dialog.FindName("CalendarPicker") as Popup;if(picker!=null)picker.IsOpen=false;
       if(calendarSearchTimer!=null){calendarSearchTimer.Stop();calendarSearchTimer.Tick-=CalendarSearchElapsed;calendarSearchTimer=null;}
@@ -190,7 +188,6 @@ namespace EndfieldWidget {
       var button=(ToggleButton)sender;int mask=int.Parse((string)button.Tag,CultureInfo.InvariantCulture);
       if(mask==CalendarData.AllKinds)calendarFilterMask=CalendarData.AllKinds;else if(button.IsChecked==true)calendarFilterMask|=mask;else calendarFilterMask&=~mask;
       RenderCalendar(false);
-      AnimateCalendarChange(0);
     }
     void CalendarDayKey(object sender,KeyEventArgs args) {
       var button=Keyboard.FocusedElement as Button;if(button==null || !(button.Tag is DateTime))return;

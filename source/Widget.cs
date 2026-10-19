@@ -20,7 +20,6 @@ using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 
@@ -571,7 +570,6 @@ namespace EndfieldWidget {
         currentTheme=OperatorTheme.FromPortrait(image);ApplyDesignPreset();
         ApplyBackgroundOpacity();
         var art=Find<Image>("OperatorImage");art.Source=image;
-        if(!preview && window.IsVisible && config.AnimateTransitions)art.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0.2,1,TimeSpan.FromMilliseconds(420)));
         currentArtKey=debut.Key;Text("OperatorName",debut.Name.ToUpper(L.Culture));Text("BannerLabel",debut.Banner);
         ApplyPortraitCrop();
         Find<TextBlock>("BannerLabel").ToolTip=L.T("Open banner");

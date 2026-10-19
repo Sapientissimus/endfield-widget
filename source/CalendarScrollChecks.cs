@@ -26,10 +26,10 @@ namespace EndfieldWidget {
       if(!preview.Handled)source.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice,Environment.TickCount,delta){RoutedEvent=Mouse.MouseWheelEvent,Source=source});
     }
     async Task CheckCalendarScrolling(Action<bool,string> check,string folder) {
-      string directory=Storage.DirectoryPath;var oldNow=calendarNow;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldSchedule=schedule;var oldCache=calendarDetailCache;var oldMotion=CalendarMotion.Override;var oldZone=Clock.ZoneOverride;var oldBounds=calendarLastBounds;
+      string directory=Storage.DirectoryPath;var oldNow=calendarNow;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldSchedule=schedule;var oldCache=calendarDetailCache;var oldZone=Clock.ZoneOverride;var oldBounds=calendarLastBounds;
       try {
         Storage.DirectoryPath=Path.Combine(folder,"scroll-isolated-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(Storage.DirectoryPath);
-        Clock.ZoneOverride=()=>TimeZoneInfo.Utc;CalendarMotion.Override=false;
+        Clock.ZoneOverride=()=>TimeZoneInfo.Utc;
         var now=new DateTimeOffset(2029,3,1,12,0,0,TimeSpan.Zero);var end=now.AddDays(4);
         calendarNow=()=>now;calendarFeed=null;schedule=null;bannerState=new BannerState{GameEvents=new List<GameEvent>{CalendarEvent("Event with a long description","81001",now.AddDays(-1),now.AddDays(1),end)}};
         calendarRemembered=false;calendarQuery="";calendarFilterMask=15;calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();calendarLastBounds=null;
@@ -59,9 +59,9 @@ namespace EndfieldWidget {
           SaveImage(calendarDialog,Path.Combine(folder,name+"-details-bottom.png"));
           scroll.ScrollToTop();await CalendarScrollLayout();
         }
-        CalendarMotion.Override=true;day.Details.IsExpanded=false;await Task.Delay(180);day.Details.IsExpanded=true;await Task.Delay(220);await CalendarScrollLayout();
-        var dayScroll=CalendarDayScroller();check(dayScroll.ScrollableHeight>400,"Animated expansion also recalculates the full description's scroll extent");
-        CalendarMotion.Override=false;dayScroll.ScrollToBottom();await CalendarScrollLayout();day.Details.IsExpanded=false;await CalendarScrollLayout();
+        day.Details.IsExpanded=false;await CalendarScrollLayout();day.Details.IsExpanded=true;await CalendarScrollLayout();
+        var dayScroll=CalendarDayScroller();check(dayScroll.ScrollableHeight>400,"Immediate expansion recalculates the full description's scroll extent");
+        dayScroll.ScrollToBottom();await CalendarScrollLayout();day.Details.IsExpanded=false;await CalendarScrollLayout();
         check(dayScroll.VerticalOffset<=dayScroll.ScrollableHeight+1 && dayScroll.ScrollableHeight<60,"Collapsing a tall card clamps the offset without leaving a blank viewport");
         day.Details.IsExpanded=true;await CalendarScrollLayout();bannerState.GameEvents.Add(CalendarEvent("Another event","81002",now.AddDays(-1),now.AddDays(1),end));RenderCalendar();await CalendarScrollLayout();
         dayScroll=CalendarDayScroller();dayScroll.ScrollToBottom();await CalendarScrollLayout();
@@ -76,7 +76,7 @@ namespace EndfieldWidget {
         check(body.VerticalOffset<before && dayScroll.VerticalOffset==0,"At the card-list beginning an upward wheel gesture returns to the calendar above");
         dayScroll.ScrollToBottom();body.ScrollToVerticalOffset(220);await CalendarScrollLayout();SaveImage(calendarDialog,Path.Combine(folder,"calendar-small-details-scroll.png"));
       }finally {
-        if(calendarDialog!=null)calendarDialog.Close();calendarDetailFetchOverride=null;calendarDetailCache=oldCache;Storage.DirectoryPath=directory;calendarNow=oldNow;calendarFeed=oldFeed;bannerState=oldBanners;schedule=oldSchedule;CalendarMotion.Override=oldMotion;Clock.ZoneOverride=oldZone;calendarLastBounds=oldBounds;calendarRemembered=false;calendarSnapshot=null;calendarRecords=null;calendarQuery="";calendarFilterMask=15;
+        if(calendarDialog!=null)calendarDialog.Close();calendarDetailFetchOverride=null;calendarDetailCache=oldCache;Storage.DirectoryPath=directory;calendarNow=oldNow;calendarFeed=oldFeed;bannerState=oldBanners;schedule=oldSchedule;Clock.ZoneOverride=oldZone;calendarLastBounds=oldBounds;calendarRemembered=false;calendarSnapshot=null;calendarRecords=null;calendarQuery="";calendarFilterMask=15;
       }
     }
   }

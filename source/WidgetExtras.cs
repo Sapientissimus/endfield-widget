@@ -200,7 +200,6 @@ namespace EndfieldWidget {
       banners.CancelDownloads();
       DisposeGameLauncher();
       if(crashRecovery!=null)crashRecovery.Dispose();
-      if(modeTransitionTimer!=null)modeTransitionTimer.Stop();
       if(calendarDialog!=null)calendarDialog.Close();if(shortcuts!=null)shortcuts.Clear();
       SystemEvents.DisplaySettingsChanged-=DisplaysChanged;
       if(keyboardSource!=null && !keyboardSource.IsDisposed){if(globalMenuKey)UnregisterHotKey(keyboardSource.Handle,MenuHotkey);if(globalToggleKey)UnregisterHotKey(keyboardSource.Handle,ToggleHotkey);keyboardSource.RemoveHook(HotkeyMessage);}

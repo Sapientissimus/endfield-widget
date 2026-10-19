@@ -1,7 +1,9 @@
 # Changelog
 
-## 1.0.1
+## 1.1.0
 
+- Keep Play, calendar, refresh and settings controls visible without requiring hover or keyboard focus, including Play in compact and mini layouts. Only the close control remains hidden until hover or keyboard focus; per-layout Play visibility settings remain available.
+- Remove animated transitions and their Settings switch. Layouts, opacity changes, operator artwork and calendar navigation now update immediately.
 - Detect installed Endfield copies automatically, including games in additional Steam libraries. Prefer Steam when both Steam and standalone versions are installed.
 - Add a game or launcher path field, file picker and return-to-automatic action in Settings, translated into all fifteen interface languages.
 - Report missing or invalid paths with a recoverable action. Search runs in the background, and a manual override is preserved between launches.

@@ -17,8 +17,8 @@ namespace EndfieldWidget {
         check(moved.Left!=start.Left || moved.Top!=start.Top,"The ultra-small view actually changes its screen coordinates");
         config.PositionLocked=true;desktopSurface.UpdateLock();check(!desktopSurface.TryUserMove(start.Left,start.Top),"The existing position lock also protects the ultra-small view");
         desktopSurface.SetClickThrough(true);check((DesktopNative.GetStyle(handle,DesktopNative.ExtendedStyleIndex)&DesktopNative.Transparent)!=0,"Ultra-small mode preserves native click-through support");desktopSurface.SetClickThrough(false);
-        diagnosticView=true;config.AnimateTransitions=true;SetWidgetMode("full");await Task.Delay(300);window.UpdateLayout();
-        flags=DesktopNative.GetStyle(handle,DesktopNative.ExtendedStyleIndex);check(window.Width>0 && window.Height>0 && !window.HasAnimatedProperties && desktopSurface.IsAttached && (flags&DesktopNative.NoActivate)!=0,"A real animated mode transition completes without changing the desktop layer or activation flags");
+        diagnosticView=true;SetWidgetMode("full");window.UpdateLayout();
+        flags=DesktopNative.GetStyle(handle,DesktopNative.ExtendedStyleIndex);check(window.Width>0 && window.Height>0 && !window.HasAnimatedProperties && desktopSurface.IsAttached && (flags&DesktopNative.NoActivate)!=0,"An immediate native mode change preserves the desktop layer and activation flags without animation clocks");
         int first=0x5e21,second=0x5e22;
         var native=new ShortcutRegistry((id,m,k)=>RegisterHotKey(handle,id,m,k),id=>UnregisterHotKey(handle,id));
         try {
@@ -31,7 +31,6 @@ namespace EndfieldWidget {
         await CheckNativeContinuity(check);
       }finally {
         diagnosticView=oldDiagnostic;var restored=new JavaScriptSerializer().Deserialize<Config>(previous);foreach(var property in typeof(Config).GetProperties())if(property.CanRead && property.CanWrite)property.SetValue(config,property.GetValue(restored,null),null);
-        foreach(var property in new[]{Window.WidthProperty,Window.HeightProperty,Window.LeftProperty,Window.TopProperty})window.BeginAnimation(property,null);
         ApplyTextScale();ApplyLayout(true);desktopSurface.SetClickThrough(config.ClickThrough);desktopSurface.UpdateLock();
         DesktopNative.SetWindowPos(handle,IntPtr.Zero,original.Left,original.Top,0,0,DesktopNative.NoSize|DesktopNative.NoZOrder|DesktopNative.NoActivatePosition);UserMoved();
       }

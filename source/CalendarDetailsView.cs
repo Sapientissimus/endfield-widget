@@ -66,6 +66,5 @@ namespace EndfieldWidget {
       }catch{if(calendarDialog!=null && epoch==calendarDetailEpoch)state.Failure();}
     }
     void ReleaseCalendarDetails(){calendarDetailEpoch++;calendarDetailStates.Clear();}
-    void AnimateCalendarChange(double direction) {if(calendarDialog==null)return;CalendarMotion.Play(CalendarFind<System.Windows.Controls.Grid>("CalendarMonthPane"),direction);CalendarMotion.Play(CalendarFind<System.Windows.Controls.Grid>("CalendarAgendaPane"),direction);}
   }
 }

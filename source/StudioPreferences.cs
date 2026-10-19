@@ -17,7 +17,6 @@ namespace EndfieldWidget {
     public string DesignPreset {get;set;}
     public bool FadeWhenIdle {get;set;}
     public double IdleOpacity {get;set;}
-    public bool AnimateTransitions {get;set;}
     public bool ShowSessionTime {get;set;}
     public string PositionAnchor {get;set;}
     public int EdgeMarginX {get;set;}
@@ -28,7 +27,7 @@ namespace EndfieldWidget {
     public string HotkeyMode {get;set;}
     public string HotkeyRefresh {get;set;}
     public Dictionary<string,PortraitFrame> PortraitFrames {get;set;}
-    void StudioDefaults(){MicroScale=TextScale=1;SanityStyle="bar";DesignPreset="soft";IdleOpacity=.75;AnimateTransitions=true;ShowSessionTime=true;PositionAnchor="free";EdgeMarginX=EdgeMarginY=12;HotkeyToggle="Ctrl+Alt+H";HotkeyMenu="Ctrl+Alt+E";HotkeyPlay="Ctrl+Alt+G";HotkeyMode="Ctrl+Alt+M";HotkeyRefresh="Ctrl+Alt+R";PortraitFrames=new Dictionary<string,PortraitFrame>();}
+    void StudioDefaults(){MicroScale=TextScale=1;SanityStyle="bar";DesignPreset="soft";IdleOpacity=.75;ShowSessionTime=true;PositionAnchor="free";EdgeMarginX=EdgeMarginY=12;HotkeyToggle="Ctrl+Alt+H";HotkeyMenu="Ctrl+Alt+E";HotkeyPlay="Ctrl+Alt+G";HotkeyMode="Ctrl+Alt+M";HotkeyRefresh="Ctrl+Alt+R";PortraitFrames=new Dictionary<string,PortraitFrame>();}
     public void NormalizeStudio() {
       MicroScale=Placement.Finite(MicroScale) && MicroScale>0?Placement.Clamp(MicroScale,.75,1.3):1;
       TextScale=Placement.Finite(TextScale) && TextScale>0?Placement.Clamp(TextScale,.85,1.2):1;

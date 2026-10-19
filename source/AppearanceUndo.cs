@@ -43,7 +43,7 @@ namespace EndfieldWidget {
         double[] values={config.Scale,config.CompactScale,config.MicroScale,config.BackgroundOpacity,config.PortraitOpacity,config.TextScale,config.IdleOpacity};
         for(int i=0;i<sliders.Length;i++)((Slider)dialog.FindName(sliders[i])).Value=values[i]*100;
         ((CheckBox)dialog.FindName("CompactSwitch")).IsChecked=config.Compact;((CheckBox)dialog.FindName("MicroSwitch")).IsChecked=config.MicroMode;((CheckBox)dialog.FindName("WatermarkSwitch")).IsChecked=config.ShowWatermark;
-        ((CheckBox)dialog.FindName("AnimationSwitch")).IsChecked=config.AnimateTransitions;((CheckBox)dialog.FindName("HoverFadeSwitch")).IsChecked=config.FadeWhenIdle;((Slider)dialog.FindName("IdleOpacitySlider")).IsEnabled=config.FadeWhenIdle;
+        ((CheckBox)dialog.FindName("HoverFadeSwitch")).IsChecked=config.FadeWhenIdle;((Slider)dialog.FindName("IdleOpacitySlider")).IsEnabled=config.FadeWhenIdle;
         ((ComboBox)dialog.FindName("PresetSelector")).SelectedIndex=Array.IndexOf(new[]{"soft","strict","minimal"},config.DesignPreset);
         ((ComboBox)dialog.FindName("SanityStyleSelector")).SelectedIndex=Array.IndexOf(new[]{"bar","ring","numbers"},config.SanityStyle);buttons();
       };

@@ -40,7 +40,6 @@ namespace EndfieldWidget {
       string[] presets={"soft","strict","minimal"};StudioChoice(dialog,extra,"PresetSelector",L.T("Style"),new[]{L.T("Soft"),L.T("Strict"),L.T("Minimal")},Array.IndexOf(presets,config.DesignPreset),i=>{config.DesignPreset=presets[i];ApplyDesignPreset();ApplyLayout(true);SavePosition();});
       string[] indicators={"bar","ring","numbers"};StudioChoice(dialog,extra,"SanityStyleSelector",L.T("Sanity indicator"),new[]{L.T("Bar"),L.T("Ring"),L.T("Numbers only")},Array.IndexOf(indicators,config.SanityStyle),i=>{config.SanityStyle=indicators[i];UpdateSanityStyle();ApplyLayout(false);SavePosition();});
       StudioSlider(dialog,extra,"TextScaleSlider",L.T("Text size"),config.TextScale*100,85,120,v=>{config.TextScale=v/100;ApplyTextScale();ApplyLayout(true);SavePosition();});
-      StudioSwitch(dialog,extra,"AnimationSwitch",L.T("Smooth transitions"),config.AnimateTransitions,v=>{config.AnimateTransitions=v;SavePosition();});
       Slider idle=null;StudioSwitch(dialog,extra,"HoverFadeSwitch",L.T("Dim when not hovered"),config.FadeWhenIdle,v=>{config.FadeWhenIdle=v;if(idle!=null)idle.IsEnabled=v;ApplyHoverOpacity();SavePosition();});
       idle=StudioSlider(dialog,extra,"IdleOpacitySlider",L.T("Idle opacity"),config.IdleOpacity*100,30,100,v=>{config.IdleOpacity=v/100;ApplyHoverOpacity();SavePosition();});idle.IsEnabled=config.FadeWhenIdle;
       WireCropSettings(dialog,SettingsSection(appearance,L.T("Operator framing")));

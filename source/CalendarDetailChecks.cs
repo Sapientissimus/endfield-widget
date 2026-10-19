@@ -14,7 +14,7 @@ using System.Windows.Threading;
 namespace EndfieldWidget {
   partial class Widget {
     async Task CheckCalendarDetailsAndMotion(Action<bool,string> check,string folder) {
-      string directory=Storage.DirectoryPath;var oldNow=calendarNow;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldSchedule=schedule;var oldCache=calendarDetailCache;var oldMotion=CalendarMotion.Override;var oldZone=Clock.ZoneOverride;
+      string directory=Storage.DirectoryPath;var oldNow=calendarNow;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldSchedule=schedule;var oldCache=calendarDetailCache;var oldZone=Clock.ZoneOverride;
       try {
         Storage.DirectoryPath=Path.Combine(folder,"details-isolated-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(Storage.DirectoryPath);calendarDetailCache=null;Clock.ZoneOverride=()=>TimeZoneInfo.Utc;
         var now=new DateTimeOffset(2029,3,1,12,0,0,TimeSpan.Zero);var entry=new CalendarEntry{Id="detail",Name="New Machine",Kind=CalendarKind.EventEnd,Source=NewsClient.NewsUrl+"/80010",At=now.AddDays(4)};
@@ -50,7 +50,7 @@ namespace EndfieldWidget {
         var alien=new CalendarEntry{Name="New Machine",Source="https://example.com/1",At=now};rejected=false;try{CalendarDetailsData.Parse(html,"[New Machine] Challenge Event Details",alien,now);}catch(FormatException){rejected=true;}
         check(rejected,"Untrusted detail URLs are rejected before fetching or displaying content");
         calendarNow=()=>now;calendarFeed=null;schedule=null;bannerState=new BannerState{GameEvents=new List<GameEvent>{CalendarEvent(entry.Name,"80010",now.AddDays(-1),now.AddDays(1),entry.At)}};calendarRemembered=false;calendarQuery="";calendarFilterMask=15;calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();
-        int requests=0;var pending=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>{requests++;return pending.Task;};CalendarMotion.Override=false;
+        int requests=0;var pending=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>{requests++;return pending.Task;};
         ShowCalendar();SelectCalendarDay(entry.At.Date);calendarDialog.UpdateLayout();await calendarDialog.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
         var day=calendarDayModels.Single();var agenda=calendarAgendaModels.Single();var state=day.Details;
         check(ReferenceEquals(state,agenda.Details) && requests==0,"Day and agenda share one detail state and do not fetch descriptions until requested");
@@ -61,14 +61,14 @@ namespace EndfieldWidget {
         check(state.Description.Contains("facility") && state.Participation.Contains("Beginning") && !state.Busy,"Completed details populate both inline descriptions and requirements");
         check(day.PeriodText.Contains("3/2/2029") && day.PeriodText.Contains("3/5/2029"),"The expanded period uses confirmed beginning and ending in the computer's timezone");
         string opened=null;calendarOpenOverride=url=>opened=url;state.IsExpanded=false;state.IsExpanded=true;check(opened==null && requests==1,"Expanding a cached detail does not open a browser or repeat its network request");day.OpenSource.Execute(day.SourceTarget);check(opened==entry.Source,"The separate source action still opens the official announcement");
-        CalendarMotion.Override=true;SelectCalendarDay(entry.At.Date.AddMonths(1));var pane=CalendarFind<Grid>("CalendarMonthPane");check(pane.HasAnimatedProperties,"Changing month starts a short visual transition");
-        SelectCalendarDay(entry.At.Date);SelectCalendarDay(entry.At.Date.AddMonths(-1));SelectCalendarDay(entry.At.Date);await Task.Delay(230);
-        check(!pane.HasAnimatedProperties && pane.Opacity==1 && pane.RenderTransform==Transform.Identity,"Rapid month changes finish at full opacity and remove their animation clocks");
-        CalendarMotion.Override=false;CalendarFilterClicked(CalendarFind<ToggleButton>("CalendarAll"),new RoutedEventArgs());check(!pane.HasAnimatedProperties && pane.Opacity==1,"Reduced motion applies filter changes immediately without animation");
+        SelectCalendarDay(entry.At.Date.AddMonths(1));var pane=CalendarFind<Grid>("CalendarMonthPane");check(!pane.HasAnimatedProperties && pane.Opacity==1,"Changing month applies immediately at full opacity");
+        SelectCalendarDay(entry.At.Date);SelectCalendarDay(entry.At.Date.AddMonths(-1));SelectCalendarDay(entry.At.Date);
+        check(!pane.HasAnimatedProperties && pane.Opacity==1 && pane.RenderTransform==Transform.Identity,"Rapid month changes preserve the final month without animation clocks or offsets");
+        CalendarFilterClicked(CalendarFind<ToggleButton>("CalendarAll"),new RoutedEventArgs());check(!pane.HasAnimatedProperties && pane.Opacity==1,"Filter changes apply immediately without animation");
         state.IsExpanded=true;calendarDialog.UpdateLayout();await Task.Delay(30);SaveImage(calendarDialog,Path.Combine(folder,"calendar-details-expanded.png"));
-        CalendarMotion.Override=true;state.IsExpanded=false;await Task.Delay(180);calendarDialog.UpdateLayout();var reveals=CalendarVisualElements<CalendarReveal>(CalendarFind<ListBox>("CalendarEvents")).ToList();
+        state.IsExpanded=false;calendarDialog.UpdateLayout();var reveals=CalendarVisualElements<CalendarReveal>(CalendarFind<ListBox>("CalendarEvents")).ToList();
         check(reveals.Count>0 && reveals.All(v=>v.ActualHeight<1 && !v.IsHitTestVisible && KeyboardNavigation.GetTabNavigation(v)==KeyboardNavigationMode.None),"Collapsed detail panels occupy no space and do not capture pointer or keyboard navigation");
-        state.IsExpanded=true;await Task.Delay(220);calendarDialog.UpdateLayout();check(reveals.Any(v=>v.ActualHeight>30),"Expanding a loaded description reveals its content with the completed card animation");
+        state.IsExpanded=true;calendarDialog.UpdateLayout();check(reveals.Any(v=>v.ActualHeight>30) && reveals.All(v=>!v.HasAnimatedProperties),"Expanding a loaded description reveals all content immediately without animation");
         var failure=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>failure.Task;state.Retry.Execute(null);failure.SetException(new HttpRequestException("offline"));await Task.Delay(30);
         check(state.Description.Contains("facility") && state.Notice.Contains("saved") && state.RetryVisibility==Visibility.Visible,"An offline refresh keeps the previously confirmed description and offers retry");
         var late=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>late.Task;state.Retry.Execute(null);calendarDialog.Close();late.SetResult(parsed);await Task.Delay(30);
@@ -78,7 +78,7 @@ namespace EndfieldWidget {
         calendarDetailFetchOverride=e=>Task.FromResult(parsed);missing.Retry.Execute(null);await Task.Delay(30);check(missing.Description.Contains("facility") && missing.RetryVisibility==Visibility.Collapsed,"Retry recovers inline details without reopening the calendar");
         SaveImage(calendarDialog,Path.Combine(folder,"calendar-details-recovered.png"));
       }finally {
-        if(calendarDialog!=null)calendarDialog.Close();calendarDetailFetchOverride=null;calendarDetailCache=oldCache;Storage.DirectoryPath=directory;calendarNow=oldNow;calendarFeed=oldFeed;bannerState=oldBanners;schedule=oldSchedule;CalendarMotion.Override=oldMotion;Clock.ZoneOverride=oldZone;calendarOpenOverride=null;calendarRemembered=false;calendarSnapshot=null;calendarRecords=null;calendarQuery="";calendarFilterMask=15;
+        if(calendarDialog!=null)calendarDialog.Close();calendarDetailFetchOverride=null;calendarDetailCache=oldCache;Storage.DirectoryPath=directory;calendarNow=oldNow;calendarFeed=oldFeed;bannerState=oldBanners;schedule=oldSchedule;Clock.ZoneOverride=oldZone;calendarOpenOverride=null;calendarRemembered=false;calendarSnapshot=null;calendarRecords=null;calendarQuery="";calendarFilterMask=15;
       }
     }
   }

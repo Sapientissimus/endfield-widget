@@ -17,7 +17,7 @@ namespace EndfieldWidget {
         string folder=Path.GetDirectoryName(Path.GetFullPath(reportPath));
         try {
           check(Storage.Isolated && startup is MemoryStartupRegistration && accountToken.Length==0,"Release checks use an isolated profile, no account and no real startup backend");
-          check(BuildInfo.Version=="1.0.1" && BuildInfo.Build=="2","User-facing version matches release 1.0.1");
+          check(BuildInfo.Version=="1.1.0" && BuildInfo.Build=="3","User-facing version matches release 1.1.0");
           check(L.Code=="en" && config.InterfaceLanguage=="en" && L.Languages[0].Code=="en","A fresh installation starts in English and lists English first");
           check(L.Normalize(null)=="en" && L.Normalize("../../outside")=="en" && L.Normalize("uk")=="uk","Missing/invalid choices safely fall back to English; explicit supported choices remain valid");
           check(L.Catalog("en").Count>=335 && L.Catalog("en").Keys.All(k=>!Regex.IsMatch(k,@"[\u0400-\u04ff]")),"All message keys use the English base catalog");

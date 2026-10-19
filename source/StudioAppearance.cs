@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace EndfieldWidget {
   partial class Widget {
@@ -13,8 +11,6 @@ namespace EndfieldWidget {
     readonly Dictionary<Border,CornerRadius> originalCorners=new Dictionary<Border,CornerRadius>();
     readonly Dictionary<Border,Thickness> originalBorders=new Dictionary<Border,Thickness>();
     Action syncCropSettings;
-    DispatcherTimer modeTransitionTimer;
-    int transitionVersion,hoverVersion;
     void CaptureAppearance(DependencyObject node) {
       var text=node as TextBlock;if(text!=null && !originalFonts.ContainsKey(text) && text.Name!="ArtWatermark")originalFonts[text]=text.FontSize;
       var border=node as Border;if(border!=null && !originalCorners.ContainsKey(border)){originalCorners[border]=border.CornerRadius;originalBorders[border]=border.BorderThickness;}
@@ -28,11 +24,8 @@ namespace EndfieldWidget {
       Find<Button>("FullCalendarButton").Click+=(s,e)=>ShowCalendar();Find<Button>("CompactCalendarButton").Click+=(s,e)=>ShowCalendar();
       ApplyHoverOpacity();
     }
-    bool AnimateSurface(){return config.AnimateTransitions && SystemParameters.ClientAreaAnimation && (!preview && !Storage.Isolated || diagnosticView);}
     void ApplyHoverOpacity() {
-      double opacity=config.FadeWhenIdle && !window.IsMouseOver && !window.IsKeyboardFocusWithin?config.IdleOpacity:1;
-      int version=++hoverVersion;double from=window.Opacity;window.BeginAnimation(UIElement.OpacityProperty,null);window.Opacity=opacity;
-      if(AnimateSurface() && window.IsVisible && Math.Abs(from-opacity)>.001){var fade=new DoubleAnimation(from,opacity,TimeSpan.FromMilliseconds(140)){FillBehavior=FillBehavior.Stop};fade.Completed+=(s,e)=>{if(version==hoverVersion)window.BeginAnimation(UIElement.OpacityProperty,null);};window.BeginAnimation(UIElement.OpacityProperty,fade);}
+      window.Opacity=config.FadeWhenIdle && !window.IsMouseOver && !window.IsKeyboardFocusWithin?config.IdleOpacity:1;
     }
     static Color BlendColor(Color a,Color b,double amount){return Color.FromRgb((byte)(a.R+(b.R-a.R)*amount),(byte)(a.G+(b.G-a.G)*amount),(byte)(a.B+(b.B-a.B)*amount));}
     void ApplyDesignPreset() {
@@ -91,17 +84,7 @@ namespace EndfieldWidget {
     }
     string WidgetMode(){return config.MicroMode?"micro":config.Compact?"compact":"full";}
     void SetWidgetMode(string mode) {
-      double width=window.ActualWidth,height=window.ActualHeight,left=window.Left,top=window.Top;
-      int version=++transitionVersion;if(modeTransitionTimer!=null)modeTransitionTimer.Stop();
-      foreach(var property in new[]{Window.WidthProperty,Window.HeightProperty,Window.LeftProperty,Window.TopProperty})window.BeginAnimation(property,null);
       config.RememberMode();config.ActivateMode(mode);ApplyLayout(true);SavePosition();
-      if(AnimateSurface() && window.IsVisible && width>0 && height>0) {
-        var duration=TimeSpan.FromMilliseconds(200);
-        foreach(var pair in new[]{Tuple.Create(Window.WidthProperty,width,window.Width),Tuple.Create(Window.HeightProperty,height,window.Height),Tuple.Create(Window.LeftProperty,left,window.Left),Tuple.Create(Window.TopProperty,top,window.Top)})
-          window.BeginAnimation(pair.Item1,new DoubleAnimation(pair.Item2,pair.Item3,duration){FillBehavior=FillBehavior.Stop,EasingFunction=new QuadraticEase{EasingMode=EasingMode.EaseInOut}});
-        modeTransitionTimer=new DispatcherTimer(DispatcherPriority.Background,window.Dispatcher){Interval=TimeSpan.FromMilliseconds(235)};
-        modeTransitionTimer.Tick+=(s,e)=>{modeTransitionTimer.Stop();if(version==transitionVersion)foreach(var property in new[]{Window.WidthProperty,Window.HeightProperty,Window.LeftProperty,Window.TopProperty})window.BeginAnimation(property,null);};modeTransitionTimer.Start();
-      }
     }
     void PaintStudio(DateTimeOffset now) {
       UpdateSanityStyle();PaintSession(now);

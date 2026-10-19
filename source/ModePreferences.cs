@@ -56,7 +56,6 @@ namespace EndfieldWidget {
     public string SanityStyle {get;set;}
     public bool FadeWhenIdle {get;set;}
     public double IdleOpacity {get;set;}
-    public bool AnimateTransitions {get;set;}
     public Dictionary<string,PortraitFrame> PortraitFrames {get;set;}
     public Dictionary<string,ModeBlocks> Blocks {get;set;}
     static Dictionary<string,PortraitFrame> CopyFrames(Dictionary<string,PortraitFrame> frames) {
@@ -66,13 +65,13 @@ namespace EndfieldWidget {
       return copy;
     }
     public static AppearanceState Capture(Config c) {
-      c.RememberMode();var result=new AppearanceState{Scale=c.Scale,CompactScale=c.CompactScale,MicroScale=c.MicroScale,BackgroundOpacity=c.BackgroundOpacity,PortraitOpacity=c.PortraitOpacity,ShowWatermark=c.ShowWatermark,Compact=c.Compact,MicroMode=c.MicroMode,TextScale=c.TextScale,DesignPreset=c.DesignPreset,SanityStyle=c.SanityStyle,FadeWhenIdle=c.FadeWhenIdle,IdleOpacity=c.IdleOpacity,AnimateTransitions=c.AnimateTransitions,PortraitFrames=CopyFrames(c.PortraitFrames)};
+      c.RememberMode();var result=new AppearanceState{Scale=c.Scale,CompactScale=c.CompactScale,MicroScale=c.MicroScale,BackgroundOpacity=c.BackgroundOpacity,PortraitOpacity=c.PortraitOpacity,ShowWatermark=c.ShowWatermark,Compact=c.Compact,MicroMode=c.MicroMode,TextScale=c.TextScale,DesignPreset=c.DesignPreset,SanityStyle=c.SanityStyle,FadeWhenIdle=c.FadeWhenIdle,IdleOpacity=c.IdleOpacity,PortraitFrames=CopyFrames(c.PortraitFrames)};
       result.Blocks=new Dictionary<string,ModeBlocks>();foreach(var pair in c.ModeProfiles)result.Blocks[pair.Key]=new ModeBlocks{ShowPlayButton=pair.Value.ShowPlayButton,ShowClock=pair.Value.ShowClock,ShowNextDebut=pair.Value.ShowNextDebut,ShowUpdates=pair.Value.ShowUpdates};
       return result;
     }
     public void Apply(Config c) {
       c.EnsureModeProfiles();c.RememberMode();
-      c.Scale=Scale;c.CompactScale=CompactScale;c.MicroScale=MicroScale;c.BackgroundOpacity=BackgroundOpacity;c.PortraitOpacity=PortraitOpacity;c.ShowWatermark=ShowWatermark;c.Compact=Compact;c.MicroMode=MicroMode;c.TextScale=TextScale;c.DesignPreset=DesignPreset;c.SanityStyle=SanityStyle;c.FadeWhenIdle=FadeWhenIdle;c.IdleOpacity=IdleOpacity;c.AnimateTransitions=AnimateTransitions;c.PortraitFrames=CopyFrames(PortraitFrames);
+      c.Scale=Scale;c.CompactScale=CompactScale;c.MicroScale=MicroScale;c.BackgroundOpacity=BackgroundOpacity;c.PortraitOpacity=PortraitOpacity;c.ShowWatermark=ShowWatermark;c.Compact=Compact;c.MicroMode=MicroMode;c.TextScale=TextScale;c.DesignPreset=DesignPreset;c.SanityStyle=SanityStyle;c.FadeWhenIdle=FadeWhenIdle;c.IdleOpacity=IdleOpacity;c.PortraitFrames=CopyFrames(PortraitFrames);
       if(Blocks!=null)foreach(var pair in Blocks)if(c.ModeProfiles.ContainsKey(pair.Key)){var mode=c.ModeProfiles[pair.Key];mode.ShowPlayButton=pair.Value.ShowPlayButton;mode.ShowClock=pair.Value.ShowClock;mode.ShowNextDebut=pair.Value.ShowNextDebut;mode.ShowUpdates=pair.Value.ShowUpdates;}
       c.ActivateMode(c.CurrentMode());c.NormalizeScales();c.NormalizePreferences();
     }

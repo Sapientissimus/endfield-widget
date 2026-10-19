@@ -1,6 +1,6 @@
 # Endfield Widget
 
-A Windows desktop companion for **Arknights: Endfield**. Version **1.0.1**.
+A Windows desktop companion for **Arknights: Endfield**. Version **1.1.0**.
 
 View Sanity, upcoming events and official announcements without opening the game. The widget stays on the desktop, adapts its colors to the featured operator and displays event times in the Windows time zone.
 
@@ -52,7 +52,7 @@ Actual application views in English with sample account and event data. Click a 
 ## Download
 
 1. Open the [latest release](https://github.com/Sapientissimus/endfield-widget/releases/latest).
-2. Download `EndfieldWidget-Windows-v1.0.1.zip` and extract it to a permanent folder.
+2. Download `EndfieldWidget-Windows-v1.1.0.zip` and extract it to a permanent folder.
 3. Open `EndfieldWidget.exe`.
 4. Open **Settings** to select a language, choose the game server and connect a SKPORT account.
 
@@ -66,6 +66,7 @@ Official dates are available without connecting an account. SKPORT is used to re
 
 - Drag the artwork area to move the widget. Use the context menu to lock its position.
 - Choose a layout from the context menu or settings. Each layout keeps its own scale and position.
+- **Play**, calendar, refresh and settings controls stay visible, including when the pointer is away. Only the close control appears on hover or keyboard focus. Play visibility can still be changed independently for each layout in Settings.
 - Open the calendar from the widget or tray menu. Times follow the current Windows time zone, including daylight-saving changes.
 - Use the tray icon to restore a hidden widget. Launching the application again also shows its existing instance.
 - **Play** looks for Endfield in the registered Steam libraries first, then for the standalone game or official launcher. When both versions are installed, Steam is used. In **Settings → Game launch**, enter a full `.exe` path and choose **Save path**, or use **Browse…** to select it. **Use automatic detection** clears the override. An unavailable manual path is reported rather than silently launching another version.

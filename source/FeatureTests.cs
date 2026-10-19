@@ -138,6 +138,7 @@ namespace EndfieldWidget {
           CheckArtworkAppearance(check,dialog,folder);
           await CheckGameActivity(check);
           await CheckGameLaunch(check,folder);
+          await CheckGameDiscovery(check,folder);
           await CheckStudioFeatures(check,folder);
           CheckContinuityFeatures(check,folder);
           await CheckOptimizationFeatures(check,folder);

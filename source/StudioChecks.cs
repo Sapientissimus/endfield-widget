@@ -60,7 +60,7 @@ namespace EndfieldWidget {
         check(window.Width==360 && window.Height==66 && Find<Border>("MicroView").Visibility==Visibility.Visible && Find<Border>("FullView").Visibility==Visibility.Collapsed && Find<Border>("CompactView").Visibility==Visibility.Collapsed,"The ultra-small mode is a single compact row with its own rendering surface");
         Paint();Find<Button>("MicroSettingsButton").Focus();window.UpdateLayout();SaveImage(window,Path.Combine(folder,"widget-micro.png"));
         check(Find<TextBlock>("MicroSanity").Text.Contains("/") && Find<TextBlock>("MicroRecovery").Text.Length>0,"The small row shows the same Sanity reading and recovery state as the full widget");
-        int launches=0;gameActivity=new GameActivity();gameProbe=()=>false;gameLauncher=()=>launches++;Find<Button>("MicroPlayButton").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));await gameLaunchTask;
+        int launches=0;gameActivity=new GameActivity();gameProbe=()=>false;gameLauncher=()=>{launches++;return Task.FromResult(0);};Find<Button>("MicroPlayButton").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));await gameLaunchTask;
         check(launches==1,"The ultra-small play action uses the shared Steam launcher");
         config.MicroScale=1.15;ApplyLayout(true);check(Math.Abs(window.Width-414)<.01 && config.Scale==1 && config.CompactScale==1,"Changing the ultra-small scale leaves both existing mode scales intact");
         SetWidgetMode("full");check(new Size(window.Width,window.Height)==fullSize,"Returning from the ultra-small row restores the full view dimensions");

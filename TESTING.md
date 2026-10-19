@@ -31,6 +31,10 @@ The suites do not use personal tokens, the clipboard, actual game launch or real
 
 Reports and render images are written to `.test-output`, which is excluded from Git. Generated binaries and private profiles are not repository content.
 
+## Game discovery and launch
+
+The feature suite creates fake Steam clients, old and new library metadata, Unicode library paths, manifests and launcher files. It checks Steam priority, standalone fallback, missing or malformed installations, manual overrides, command construction and settings persistence. The files are never executed. Discovery results and launch actions are replaced when exercising the interface, including late results after Settings closes. No game or real launcher is started.
+
 ## Translation maintenance
 
 English is the base catalog. Every supported locale must contain the same message keys. Most keys are English phrases; separate grammatical keys preserve language-specific singular, plural and case forms. Keep placeholders intact and check the rendered layout after changing text. Source article prose remains separate from interface translations.

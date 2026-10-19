@@ -59,6 +59,7 @@ namespace EndfieldWidget {
       WireStudioSettings(dialog);
       WireContinuitySettings(dialog);
       WireLanguageSettings(dialog);
+      WireGameLaunchSettings(dialog);
       dialog.PreviewKeyDown+=(s,e)=>{if(e.Key==System.Windows.Input.Key.Escape){e.Handled=true;dialog.Close();}};
       Action<string> setMessage=text=>{message.Text=text;message.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;};
       Action updateAccount=()=>{

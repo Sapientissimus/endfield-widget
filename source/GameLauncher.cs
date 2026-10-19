@@ -48,15 +48,11 @@ namespace EndfieldWidget {
       string path=Path.GetFullPath(executable);
       return new ProcessStartInfo {FileName=path,Arguments="-applaunch "+AppId,WorkingDirectory=Path.GetDirectoryName(path),UseShellExecute=false};
     }
-    public static void Launch() {
-      using(var process=Process.Start(Command(FindExecutable()))) {
-        if(process==null)throw new InvalidOperationException("Steam could not be started.");
-      }
-    }
   }
 
   partial class Widget {
-    Action gameLauncher;
+    Func<Task> gameLauncher;
+    Func<string,GameLaunchTarget> gameTargetResolver;
     Func<bool?> gameProbe;
     DateTimeOffset? observedGameStart;
     GameActivity gameActivity=new GameActivity();
@@ -65,11 +61,15 @@ namespace EndfieldWidget {
     bool gameLaunching;
     string gameLaunchError="";
     Task gameLaunchTask=Task.FromResult(0);
-    static string GameLaunchHint {get{return L.T("Launch Endfield through Steam");}}
+    static string GameLaunchHint {get{return L.T("Launch Endfield");}}
     void InitializeGameLauncher() {
+      gameTargetResolver=path=>preview || Storage.Isolated?(string.IsNullOrWhiteSpace(path)?null:GameInstallations.Manual(path)):GameInstallations.Resolve(path);
       gameLauncher=()=>{
-        if(preview || Storage.Isolated)throw new InvalidOperationException("Game launch is disabled in diagnostics.");
-        SteamGameLauncher.Launch();
+        string path=config.GameExecutablePath??"";
+        return Task.Run(()=>{
+          if(preview || Storage.Isolated)throw new InvalidOperationException("Game launch is disabled in diagnostics.");
+          GameInstallations.Launch(gameTargetResolver(path));
+        });
       };
       gameProbe=()=>{if(preview || Storage.Isolated)return (bool?)false;var observation=GameActivity.Sample();observedGameStart=observation.Started;return observation.Running;};
       gameStartProbe=()=>observedGameStart;
@@ -118,12 +118,14 @@ namespace EndfieldWidget {
       }
       gameLaunching=true;gameLaunchError="";UpdateGameLaunchControls();
       try {
-        gameLauncher();
+        await gameLauncher();
         await Task.Delay(2000);
+      }catch(GamePathException) {
+        gameLaunchError=L.T("The saved game path is unavailable. Choose another executable in Settings.");
       }catch(FileNotFoundException) {
-        gameLaunchError=L.T("Steam was not found. Install or open Steam and try again.");
+        gameLaunchError=L.T("Game not found. Install Endfield or choose its path in Settings.");
       }catch {
-        gameLaunchError=L.T("Could not launch the game. Check that Steam opens and try again.");
+        gameLaunchError=L.T("Could not launch the game. Check its path in Settings and try again.");
       }finally {gameLaunching=false;if(!closing)UpdateGameLaunchControls();}
     }
   }

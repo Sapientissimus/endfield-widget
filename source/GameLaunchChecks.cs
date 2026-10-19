@@ -20,7 +20,7 @@ namespace EndfieldWidget {
       try {
         gameProbe=()=>false;gameActivity=new GameActivity();BuildGameTrayControl(trayMenu);
         gameFocuser=()=>{focuses++;return true;};
-        gameLauncher=()=>{calls++;};
+        gameLauncher=()=>{calls++;return Task.FromResult(0);};
         button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));var pending=gameLaunchTask;
         check(calls==1 && gameLaunching && !button.IsEnabled && Find<TextBlock>("PlayLabel").Text=="Launching…","The real play-button event dispatches once and shows launch feedback");
         button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
@@ -34,11 +34,13 @@ namespace EndfieldWidget {
         gameProbe=()=>true;PollGameActivity(DateTimeOffset.UtcNow);await LaunchGame();
         check(calls==3 && focuses==1 && button.IsEnabled && Find<Button>("CompactPlayButton").IsEnabled && trayGamePlay.Enabled && trayGamePlay.Text=="Game is running","A running game returns to its existing window without dispatching a duplicate Steam launch");
         gameProbe=()=>false;gameActivity=new GameActivity();UpdateGameLaunchControls();
-        gameLauncher=()=>{throw new FileNotFoundException("isolated missing-Steam failure");};await LaunchGame();
-        check(button.IsEnabled && Find<TextBlock>("PlayLabel").Text=="Try again" && button.ToolTip.ToString().Contains("Steam was not found"),"Missing Steam leaves an actionable retry button and clear explanation");
+        gameLauncher=()=>{throw new FileNotFoundException("isolated missing-game failure");};await LaunchGame();
+        check(button.IsEnabled && Find<TextBlock>("PlayLabel").Text=="Try again" && button.ToolTip.ToString().Contains("Game not found"),"A missing game leaves an actionable retry button and a Settings hint");
+        gameLauncher=()=>{throw new GamePathException();};await LaunchGame();
+        check(button.IsEnabled && button.ToolTip.ToString().Contains("saved game path is unavailable"),"A missing manual override is reported without silently choosing another installation");
         gameLauncher=()=>{throw new InvalidOperationException("isolated process-start failure");};await LaunchGame();
         check(button.IsEnabled && !gameLaunching && button.ToolTip.ToString().Contains("Could not launch the game"),"A failed launch is handled without crashing the widget or leaving its button disabled");
-        gameLauncher=()=>{calls++;};await LaunchGame();
+        gameLauncher=()=>{calls++;return Task.FromResult(0);};await LaunchGame();
         check(calls==4 && Find<TextBlock>("PlayLabel").Text=="Play" && button.ToolTip.ToString()==GameLaunchHint,"Retry clears prior errors and dispatches the launch normally");
       }finally {gameLauncher=original;gameProbe=originalProbe;gameFocuser=originalFocuser;gameActivity=originalActivity;trayGamePlay=originalTray;trayMenu.Dispose();UpdateGameLaunchControls();}
     }

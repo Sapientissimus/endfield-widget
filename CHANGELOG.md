@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Detect installed Endfield copies automatically, including games in additional Steam libraries. Prefer Steam when both Steam and standalone versions are installed.
+- Add a game or launcher path field, file picker and return-to-automatic action in Settings, translated into all fifteen interface languages.
+- Report missing or invalid paths with a recoverable action. Search runs in the background, and a manual override is preserved between launches.
+
 ## 1.0
 
 Initial public release.

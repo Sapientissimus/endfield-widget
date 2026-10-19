@@ -129,3 +129,7 @@ Game artwork, names, characters and original official announcement content are e
 The publisher's fan-content rules are available in the [Arknights: Endfield Fan Content and Streaming Guidelines](https://endfield.gryphline.com/en-us/news/4497). This project does not grant additional rights to game materials.
 
 This is an unofficial companion and is not affiliated with the game's publishers.
+
+## Author
+
+Find me on [Patreon](https://www.patreon.com/Sapientissimus).

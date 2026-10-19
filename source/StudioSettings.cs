@@ -31,26 +31,28 @@ namespace EndfieldWidget {
       System.Windows.Automation.AutomationProperties.SetName(combo,title);combo.SelectionChanged+=(s,e)=>{if(combo.SelectedIndex>=0)changed(combo.SelectedIndex);};parent.Children.Add(combo);return combo;
     }
     void WireStudioSettings(Window dialog) {
-      var appearance=(StackPanel)((Slider)dialog.FindName("OpacitySlider")).Parent;
+      var appearance=(StackPanel)dialog.FindName("AppearanceSettingsPanel");
       var extra=SettingsSection(appearance,L.T("Modes and appearance"));
       var compact=(CheckBox)dialog.FindName("CompactSwitch");CheckBox micro=null;
-      micro=StudioSwitch(dialog,extra,"MicroSwitch",L.T("Mini mode"),config.MicroMode,v=>{SetWidgetMode(v?"micro":"full");compact.IsChecked=config.Compact;});
+      micro=StudioSwitch(dialog,(StackPanel)dialog.FindName("LayoutModesPanel"),"MicroSwitch",L.T("Mini mode"),config.MicroMode,v=>{SetWidgetMode(v?"micro":"full");compact.IsChecked=config.Compact;});
       compact.Click+=(s,e)=>micro.IsChecked=config.MicroMode;
-      StudioSlider(dialog,extra,"MicroScaleSlider",L.T("Mini mode scale"),config.MicroScale*100,75,130,v=>{config.MicroScale=v/100;if(config.MicroMode)ApplyLayout(true);SavePosition();});
+      StudioSlider(dialog,(StackPanel)dialog.FindName("MiniScalePanel"),"MicroScaleSlider",L.T("Mini mode scale"),config.MicroScale*100,75,130,v=>{config.MicroScale=v/100;if(config.MicroMode)ApplyLayout(true);SavePosition();});
       string[] presets={"soft","strict","minimal"};StudioChoice(dialog,extra,"PresetSelector",L.T("Style"),new[]{L.T("Soft"),L.T("Strict"),L.T("Minimal")},Array.IndexOf(presets,config.DesignPreset),i=>{config.DesignPreset=presets[i];ApplyDesignPreset();ApplyLayout(true);SavePosition();});
       string[] indicators={"bar","ring","numbers"};StudioChoice(dialog,extra,"SanityStyleSelector",L.T("Sanity indicator"),new[]{L.T("Bar"),L.T("Ring"),L.T("Numbers only")},Array.IndexOf(indicators,config.SanityStyle),i=>{config.SanityStyle=indicators[i];UpdateSanityStyle();ApplyLayout(false);SavePosition();});
       StudioSlider(dialog,extra,"TextScaleSlider",L.T("Text size"),config.TextScale*100,85,120,v=>{config.TextScale=v/100;ApplyTextScale();ApplyLayout(true);SavePosition();});
       Slider idle=null;StudioSwitch(dialog,extra,"HoverFadeSwitch",L.T("Dim when not hovered"),config.FadeWhenIdle,v=>{config.FadeWhenIdle=v;if(idle!=null)idle.IsEnabled=v;ApplyHoverOpacity();SavePosition();});
       idle=StudioSlider(dialog,extra,"IdleOpacitySlider",L.T("Idle opacity"),config.IdleOpacity*100,30,100,v=>{config.IdleOpacity=v/100;ApplyHoverOpacity();SavePosition();});idle.IsEnabled=config.FadeWhenIdle;
-      WireCropSettings(dialog,SettingsSection(appearance,L.T("Operator framing")));
-      var game=(StackPanel)((ComboBox)dialog.FindName("RegionSelector")).Parent;
+      var framing=SettingsSection(appearance,L.T("Operator framing"));
+      foreach(string name in new[]{"PortraitOpacityRow","PortraitOpacitySlider","WatermarkSettingRow"}){var control=(FrameworkElement)dialog.FindName(name);appearance.Children.Remove(control);framing.Children.Add(control);}
+      WireCropSettings(dialog,framing);
+      var game=(StackPanel)dialog.FindName("GameSettingsPanel");
       StudioSwitch(dialog,game,"SessionTimeSwitch",L.T("Time in game"),config.ShowSessionTime,v=>{config.ShowSessionTime=v;PaintSession(DateTimeOffset.UtcNow);SavePosition();});
       var calendar=RegisterControl(dialog,"OpenCalendarButton",new Button{Content=L.T("Open calendar"),FontSize=11,Padding=new Thickness(10,7,10,7),Margin=new Thickness(0,10,0,0),HorizontalAlignment=HorizontalAlignment.Left});calendar.Click+=(s,e)=>ShowCalendar();game.Children.Add(calendar);
-      var placement=(StackPanel)((Grid)((CheckBox)dialog.FindName("PositionLockSwitch")).Parent).Parent;
+      var placement=(StackPanel)dialog.FindName("DesktopSettingsPanel");
       WirePlacementSettings(dialog,SettingsSection(placement,L.T("Precise placement")));WireShortcutSettings(dialog,SettingsSection(placement,L.T("Keyboard shortcuts")));
     }
     void WireCropSettings(Window dialog,StackPanel parent) {
-      var operatorName=RegisterControl(dialog,"CropOperatorName",SettingsLabel(Find<TextBlock>("OperatorName").Text));operatorName.FontWeight=FontWeights.SemiBold;parent.Children.Add(operatorName);
+      var operatorName=RegisterControl(dialog,"CropOperatorName",SettingsLabel(Find<TextBlock>("OperatorName").Text));operatorName.FontWeight=FontWeights.SemiBold;operatorName.Margin=new Thickness(0,12,0,0);parent.Children.Add(operatorName);
       bool compact=false,updating=false;Slider zoom=null,x=null,y=null;
       Action sync=()=>{
         if(updating || string.IsNullOrEmpty(currentArtKey))return;updating=true;

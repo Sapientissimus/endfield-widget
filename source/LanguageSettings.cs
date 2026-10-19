@@ -10,10 +10,10 @@ using Forms=System.Windows.Forms;
 namespace EndfieldWidget {
   partial class Widget {
     void WireLanguageSettings(Window dialog) {
-      var parent=(StackPanel)((ComboBox)dialog.FindName("RegionSelector")).Parent;
-      var section=new StackPanel{Margin=new Thickness(0,0,0,12)};var label=SettingsLabel(L.T("Interface language"));label.Margin=new Thickness(0,0,0,7);section.Children.Add(label);
+      var parent=(StackPanel)dialog.FindName("GameSettingsPanel");
+      var section=new StackPanel{Margin=new Thickness(0,12,0,0)};var label=SettingsLabel(L.T("Interface language"));label.Margin=new Thickness(0,0,0,7);section.Children.Add(label);
       var choice=RegisterControl(dialog,"LanguageSelector",new ComboBox{ItemsSource=L.Languages,DisplayMemberPath="Name",SelectedValuePath="Code",SelectedValue=config.InterfaceLanguage,MinHeight=32,FontSize=12,HorizontalAlignment=HorizontalAlignment.Stretch});
-      System.Windows.Automation.AutomationProperties.SetName(choice,L.T("Interface language"));section.Children.Add(choice);parent.Children.Insert(0,section);
+      System.Windows.Automation.AutomationProperties.SetName(choice,L.T("Interface language"));section.Children.Add(choice);parent.Children.Insert(1,section);
       choice.SelectionChanged+=(s,e)=>{
         var selected=choice.SelectedItem as LanguageChoice;string next=selected==null?null:selected.Code;if(next==null || next==config.InterfaceLanguage)return;
         if(refreshBusy){choice.SelectedValue=config.InterfaceLanguage;var feedback=(TextBlock)dialog.FindName("SettingsFeedback");feedback.Text=L.T("Wait for the current refresh to finish.");feedback.Visibility=Visibility.Visible;return;}

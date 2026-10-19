@@ -81,41 +81,21 @@
         </Button>
       </Grid>
       <ScrollViewer x:Name="SettingsScroll" Style="{StaticResource SettingsScrollStyle}" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,4,-7,0" Padding="0,0,7,0" PanningMode="VerticalOnly">
-        <StackPanel>
-          <Border CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
-            <StackPanel>
+        <StackPanel x:Name="SettingsSections">
+          <Border x:Name="GameSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+            <StackPanel x:Name="GameSettingsPanel">
               <StackPanel Orientation="Horizontal"><TextBlock Text="◈" FontSize="17" Foreground="{DynamicResource ThemeAccentBrush}" Margin="0,-1,8,0"/><TextBlock Text="{DynamicResource Locale.5c412a262086b9701cda0630}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
               <TextBlock Text="{DynamicResource Locale.830ef117e1386dfc8c1c2220}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource ThemeMutedBrush}" Margin="0,12,0,6"/>
               <ComboBox x:Name="RegionSelector" Height="35" FontSize="12"/>
               <TextBlock x:Name="BannerCheckStatus" Visibility="Collapsed" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource ThemeSubtleBrush}" Margin="0,8,0,0"/>
             </StackPanel>
           </Border>
-          <Border CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
-            <StackPanel><TextBlock Text="{DynamicResource Locale.3907fa7f80722a6fc58cd8c1}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
-              <Grid><TextBlock Text="{DynamicResource Locale.e82b2a16228150ae98c68d6e}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="CompactSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.e82b2a16228150ae98c68d6e}"/></Grid>
-              <Grid Margin="0,16,0,0"><TextBlock Text="{DynamicResource Locale.dea0eeb711575258adf05cc8}" FontSize="12" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="ScaleInput" Style="{StaticResource NumberInput}" AutomationProperties.Name="{DynamicResource Locale.fdef2714b323f6e5c53dbd95}"/><TextBlock Text="%" FontSize="11" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource ThemeMutedBrush}"/><Button x:Name="ScaleReset" Content="100%" FontSize="10" Padding="7,4" ToolTip="{DynamicResource Locale.4f46a5564c03aed3aabcb648}" AutomationProperties.Name="{DynamicResource Locale.50f6c61ebc56874d973985fc}"/></StackPanel></Grid>
-              <Slider x:Name="ScaleSlider" Minimum="75" Maximum="130" SmallChange="1" LargeChange="10" TickFrequency="1" AutomationProperties.Name="{DynamicResource Locale.dea0eeb711575258adf05cc8}"/>
-              <Grid Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.a6b74db5547fe5e4476c075e}" FontSize="12" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="CompactScaleInput" Style="{StaticResource NumberInput}" AutomationProperties.Name="{DynamicResource Locale.bd6663494f396d1acfae3e35}"/><TextBlock Text="%" FontSize="11" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource ThemeMutedBrush}"/><Button x:Name="CompactScaleReset" Content="100%" FontSize="10" Padding="7,4" ToolTip="{DynamicResource Locale.f3d1b058e38f478f75cbc147}" AutomationProperties.Name="{DynamicResource Locale.e3e4f16bcddab9f9449257ee}"/></StackPanel></Grid>
-              <Slider x:Name="CompactScaleSlider" Minimum="75" Maximum="130" SmallChange="1" LargeChange="10" TickFrequency="1" AutomationProperties.Name="{DynamicResource Locale.a6b74db5547fe5e4476c075e}"/>
-              <Grid Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.284935fb8743e4115c9aa962}" FontSize="12"/><TextBlock x:Name="OpacityValue" HorizontalAlignment="Right" FontSize="12" Foreground="{DynamicResource ThemeAccentBrush}"/></Grid>
-              <Slider x:Name="OpacitySlider" Minimum="60" Maximum="100" SmallChange="5" LargeChange="10" AutomationProperties.Name="{DynamicResource Locale.284935fb8743e4115c9aa962}"/>
-              <Grid Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.d1ee49791db661d2f09abe73}" FontSize="12"/><TextBlock x:Name="PortraitOpacityValue" HorizontalAlignment="Right" FontSize="12" Foreground="{DynamicResource ThemeAccentBrush}"/></Grid>
-              <Slider x:Name="PortraitOpacitySlider" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10" AutomationProperties.Name="{DynamicResource Locale.d1ee49791db661d2f09abe73}"/>
-              <Grid Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.7ccddb32776365e77babf212}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="WatermarkSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.b0f8364b94303bb8102449da}"/></Grid>
-              <Expander x:Name="VisibleBlocks" Margin="0,12,0,0" Foreground="{DynamicResource ThemeTextBrush}"><Expander.Header><TextBlock Text="{DynamicResource Locale.a440fa3cd653e2c200affb7a}" FontSize="12" Foreground="{DynamicResource ThemeSoftAccentBrush}"/></Expander.Header>
-                <StackPanel Margin="0,11,0,0">
-                  <Grid><TextBlock Text="{DynamicResource Locale.17ccfa5b681e3e7b29316598}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="ShowUpdateSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.45a72117edd7f930ca88ba4e}"/></Grid>
-                  <Grid Margin="0,12,0,0"><TextBlock Text="{DynamicResource Locale.3e881a8fe08566d8678ef0f0}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="ShowNextSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.d8c2783b943e1ecfebbd35d3}"/></Grid>
-                  <Grid Margin="0,12,0,0"><TextBlock Text="{DynamicResource Locale.62eecd9cb29ba711ad61be19}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="ShowPlaySwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.a70b243ee87ff01fe8c43706}"/></Grid>
-                </StackPanel>
-              </Expander>
-            </StackPanel>
-          </Border>
-          <Border CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
-            <StackPanel>
+          <Border x:Name="AccountSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+            <StackPanel x:Name="AccountSettingsPanel">
               <Grid>
-                <StackPanel Orientation="Horizontal"><TextBlock Text="◎" FontSize="17" Foreground="{DynamicResource ThemeAccentBrush}" Margin="0,-1,8,0"/><TextBlock Text="{DynamicResource Locale.017324d3fa0b5ec173188b26}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
-                <Border HorizontalAlignment="Right" Background="{DynamicResource ThemeBadgeBrush}" CornerRadius="4" Padding="7,4" VerticalAlignment="Center"><TextBlock x:Name="AccountConnectionBadge" Text="{DynamicResource Locale.0303e182467081801f8b6148}" FontSize="9" Foreground="{DynamicResource ThemeMutedBrush}"/></Border>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Grid Margin="0,0,10,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="◎" FontSize="17" Foreground="{DynamicResource ThemeAccentBrush}" Margin="0,-1,8,0"/><TextBlock Grid.Column="1" Text="{DynamicResource Locale.017324d3fa0b5ec173188b26}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/></Grid>
+                <Border Grid.Column="1" HorizontalAlignment="Right" Background="{DynamicResource ThemeBadgeBrush}" CornerRadius="4" Padding="7,4" VerticalAlignment="Center"><TextBlock x:Name="AccountConnectionBadge" Text="{DynamicResource Locale.0303e182467081801f8b6148}" FontSize="9" Foreground="{DynamicResource ThemeMutedBrush}"/></Border>
               </Grid>
               <Button x:Name="OpenSkportButton" Content="{DynamicResource Locale.75c30e65c55708a859f822bb}" HorizontalAlignment="Left" FontSize="11" Padding="10,7" Margin="0,12,0,13"/>
               <TextBlock Text="{DynamicResource Locale.5ee3f7371586a03f13071aaa}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource ThemeMutedBrush}" Margin="0,0,0,6"/>
@@ -142,8 +122,30 @@
               </Expander>
             </StackPanel>
           </Border>
-          <Border CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,3">
-            <StackPanel>
+          <Border x:Name="AppearanceSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+            <StackPanel x:Name="AppearanceSettingsPanel"><TextBlock Text="{DynamicResource Locale.3907fa7f80722a6fc58cd8c1}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+              <StackPanel x:Name="LayoutModesPanel"><Grid><TextBlock Text="{DynamicResource Locale.e82b2a16228150ae98c68d6e}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="CompactSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.e82b2a16228150ae98c68d6e}"/></Grid></StackPanel>
+              <Grid Margin="0,16,0,0"><TextBlock Text="{DynamicResource Locale.dea0eeb711575258adf05cc8}" FontSize="12" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="ScaleInput" Style="{StaticResource NumberInput}" AutomationProperties.Name="{DynamicResource Locale.fdef2714b323f6e5c53dbd95}"/><TextBlock Text="%" FontSize="11" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource ThemeMutedBrush}"/><Button x:Name="ScaleReset" Content="100%" FontSize="10" Padding="7,4" ToolTip="{DynamicResource Locale.4f46a5564c03aed3aabcb648}" AutomationProperties.Name="{DynamicResource Locale.50f6c61ebc56874d973985fc}"/></StackPanel></Grid>
+              <Slider x:Name="ScaleSlider" Minimum="75" Maximum="130" SmallChange="1" LargeChange="10" TickFrequency="1" AutomationProperties.Name="{DynamicResource Locale.dea0eeb711575258adf05cc8}"/>
+              <Grid Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.a6b74db5547fe5e4476c075e}" FontSize="12" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="CompactScaleInput" Style="{StaticResource NumberInput}" AutomationProperties.Name="{DynamicResource Locale.bd6663494f396d1acfae3e35}"/><TextBlock Text="%" FontSize="11" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource ThemeMutedBrush}"/><Button x:Name="CompactScaleReset" Content="100%" FontSize="10" Padding="7,4" ToolTip="{DynamicResource Locale.f3d1b058e38f478f75cbc147}" AutomationProperties.Name="{DynamicResource Locale.e3e4f16bcddab9f9449257ee}"/></StackPanel></Grid>
+              <Slider x:Name="CompactScaleSlider" Minimum="75" Maximum="130" SmallChange="1" LargeChange="10" TickFrequency="1" AutomationProperties.Name="{DynamicResource Locale.a6b74db5547fe5e4476c075e}"/>
+              <StackPanel x:Name="MiniScalePanel"/>
+              <Grid Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.284935fb8743e4115c9aa962}" FontSize="12"/><TextBlock x:Name="OpacityValue" HorizontalAlignment="Right" FontSize="12" Foreground="{DynamicResource ThemeAccentBrush}"/></Grid>
+              <Slider x:Name="OpacitySlider" Minimum="60" Maximum="100" SmallChange="5" LargeChange="10" AutomationProperties.Name="{DynamicResource Locale.284935fb8743e4115c9aa962}"/>
+              <Grid x:Name="PortraitOpacityRow" Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.d1ee49791db661d2f09abe73}" FontSize="12"/><TextBlock x:Name="PortraitOpacityValue" HorizontalAlignment="Right" FontSize="12" Foreground="{DynamicResource ThemeAccentBrush}"/></Grid>
+              <Slider x:Name="PortraitOpacitySlider" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10" AutomationProperties.Name="{DynamicResource Locale.d1ee49791db661d2f09abe73}"/>
+              <Grid x:Name="WatermarkSettingRow" Margin="0,10,0,0"><TextBlock Text="{DynamicResource Locale.7ccddb32776365e77babf212}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="WatermarkSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.b0f8364b94303bb8102449da}"/></Grid>
+              <Expander x:Name="VisibleBlocks" Margin="0,12,0,0" Foreground="{DynamicResource ThemeTextBrush}"><Expander.Header><TextBlock Text="{DynamicResource Locale.a440fa3cd653e2c200affb7a}" FontSize="12" Foreground="{DynamicResource ThemeSoftAccentBrush}"/></Expander.Header>
+                <StackPanel Margin="0,11,0,0">
+                  <Grid><TextBlock Text="{DynamicResource Locale.17ccfa5b681e3e7b29316598}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="ShowUpdateSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.45a72117edd7f930ca88ba4e}"/></Grid>
+                  <Grid Margin="0,12,0,0"><TextBlock Text="{DynamicResource Locale.3e881a8fe08566d8678ef0f0}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="ShowNextSwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.d8c2783b943e1ecfebbd35d3}"/></Grid>
+                  <Grid Margin="0,12,0,0"><TextBlock Text="{DynamicResource Locale.62eecd9cb29ba711ad61be19}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="ShowPlaySwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.a70b243ee87ff01fe8c43706}"/></Grid>
+                </StackPanel>
+              </Expander>
+            </StackPanel>
+          </Border>
+          <Border x:Name="DesktopSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+            <StackPanel x:Name="DesktopSettingsPanel">
               <StackPanel Orientation="Horizontal" Margin="0,0,0,11"><TextBlock Text="▣" FontSize="16" Foreground="{DynamicResource ThemeAccentBrush}" Margin="0,0,8,0"/><TextBlock Text="{DynamicResource Locale.4df9939944a7b324991dfbe4}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <TextBlock Text="{DynamicResource Locale.20cd3751f574e2322a44cee8}" FontSize="12" VerticalAlignment="Center"/>
@@ -154,8 +156,8 @@
               <Grid Margin="0,15,0,0"><TextBlock Text="{DynamicResource Locale.79ee9903f7dd8a121d50a3d9}" FontSize="12"/><TextBlock x:Name="ToggleHotkeyLabel" HorizontalAlignment="Right" FontSize="11" Foreground="{DynamicResource ThemeSoftAccentBrush}"/></Grid>
             </StackPanel>
           </Border>
-          <Border CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,12,0,3">
-            <StackPanel><TextBlock Text="{DynamicResource Locale.788011833a5a0f22db90c91e}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+          <Border x:Name="NotificationsSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+            <StackPanel x:Name="NotificationsSettingsPanel"><TextBlock Text="{DynamicResource Locale.788011833a5a0f22db90c91e}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
               <Grid><TextBlock Text="{DynamicResource Locale.7e2d391bba385335d82d2b6f}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="SanityNotifySwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.56d89231673b438770747335}"/></Grid>
               <Grid x:Name="SanityNoticeOptions" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="43"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox x:Name="SanityNoticeMode" Height="30" FontSize="11" Margin="0,0,10,0" AutomationProperties.Name="{DynamicResource Locale.1e612983990b025daf21750e}"/><TextBox x:Name="SanityNoticeValue" Grid.Column="1" Style="{StaticResource NumberInput}" AutomationProperties.Name="{DynamicResource Locale.02a8dd4d09936b829d0ee390}"/><TextBlock x:Name="SanityNoticeUnit" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Margin="8,0,0,0" Foreground="{DynamicResource ThemeMutedBrush}"/></Grid>
               <Grid Margin="0,15,0,0"><TextBlock Text="{DynamicResource Locale.8107bcbbcc36543fa273772f}" FontSize="12" VerticalAlignment="Center"/><CheckBox x:Name="MaintenanceNotifySwitch" Style="{StaticResource SettingsSwitch}" HorizontalAlignment="Right" AutomationProperties.Name="{DynamicResource Locale.9e8d614c3c81f3214971fe1c}"/></Grid>

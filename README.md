@@ -34,7 +34,7 @@ Actual application views in English with sample account and event data. Click a 
 
 **Settings** — language, server, layout scale and background opacity.
 
-<a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" width="460" alt="Settings showing the language, game server and appearance controls"></a>
+<a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" width="460" alt="Settings with language and server selection, SKPORT account connection and game launch options"></a>
 
 </details>
 

@@ -28,12 +28,12 @@ namespace EndfieldWidget {
       return false;
     }
     void WireContinuitySettings(Window dialog) {
-      var appearance=(StackPanel)((Slider)dialog.FindName("OpacitySlider")).Parent;
-      var actions=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,13,0,0)};
+      var appearance=(StackPanel)dialog.FindName("AppearanceSettingsPanel");
+      var actions=new WrapPanel{Margin=new Thickness(0,13,0,0)};
       var undo=RegisterControl(dialog,"UndoAppearanceButton",new Button{Content=L.T("Undo change"),Padding=new Thickness(11,8,11,8),FontSize=11,ToolTip=L.T("Undo the last appearance change · Ctrl+Z")});
       var restore=RegisterControl(dialog,"RestoreAppearanceButton",new Button{Content=L.T("Previous appearance"),Padding=new Thickness(11,8,11,8),FontSize=11,Margin=new Thickness(8,0,0,0),ToolTip=L.T("Restore appearance from backup")});
-      actions.Children.Add(undo);actions.Children.Add(restore);appearance.Children.Insert(1,actions);
-      var feedback=RegisterControl(dialog,"AppearanceFeedback",SettingsLabel(""));feedback.TextWrapping=TextWrapping.Wrap;feedback.FontSize=10;feedback.Margin=new Thickness(0,5,0,0);appearance.Children.Insert(2,feedback);
+      actions.Children.Add(undo);actions.Children.Add(restore);appearance.Children.Add(actions);
+      var feedback=RegisterControl(dialog,"AppearanceFeedback",SettingsLabel(""));feedback.TextWrapping=TextWrapping.Wrap;feedback.FontSize=10;feedback.Margin=new Thickness(0,5,0,0);appearance.Children.Add(feedback);
       settingsBackupAvailable=Storage.ReadBackup()!=null;
       Action buttons=()=>{undo.IsEnabled=appearanceHistory!=null && appearanceHistory.CanUndo;restore.IsEnabled=settingsBackupAvailable;};syncUndoButton=buttons;buttons();
       undo.Click+=(s,e)=>{feedback.Text=UndoAppearance()?L.T("Change undone."):"";buttons();};
@@ -53,8 +53,8 @@ namespace EndfieldWidget {
       dialog.PreviewKeyDown+=(s,e)=>{
         if(e.Key==Key.Z && Keyboard.Modifiers==ModifierKeys.Control && !Within<TextBoxBase>(e.OriginalSource) && !Within<PasswordBox>(e.OriginalSource)){e.Handled=true;feedback.Text=UndoAppearance()?L.T("Change undone."):"";}
       };
-      var root=(StackPanel)((ScrollViewer)dialog.FindName("SettingsScroll")).Content;
-      var card=new Border{CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(1),Padding=new Thickness(16),Margin=new Thickness(0,12,0,3)};card.SetResourceReference(Border.BackgroundProperty,"ThemeCardBrush");card.SetResourceReference(Border.BorderBrushProperty,"ThemeBorderBrush");
+      var root=(StackPanel)dialog.FindName("SettingsSections");
+      var card=RegisterControl(dialog,"AboutSettingsCard",new Border{CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(1),Padding=new Thickness(16)});card.SetResourceReference(Border.BackgroundProperty,"ThemeCardBrush");card.SetResourceReference(Border.BorderBrushProperty,"ThemeBorderBrush");
       var about=new StackPanel();card.Child=about;root.Children.Add(card);var title=SettingsLabel(L.T("About"));title.FontSize=16;title.FontWeight=FontWeights.SemiBold;about.Children.Add(title);
       var version=RegisterControl(dialog,"BuildVersionLabel",SettingsLabel("Endfield  "+BuildInfo.Version));version.Margin=new Thickness(0,10,0,0);about.Children.Add(version);
       var save=RegisterControl(dialog,"SaveReportButton",new Button{Content=L.T("Save report"),HorizontalAlignment=HorizontalAlignment.Left,Padding=new Thickness(11,8,11,8),FontSize=11,Margin=new Thickness(0,10,0,0)});about.Children.Add(save);

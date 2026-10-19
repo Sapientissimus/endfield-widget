@@ -11,9 +11,9 @@ namespace EndfieldWidget {
   partial class Widget {
     Task gameSettingsTask=Task.FromResult(0);
     void WireGameLaunchSettings(Window dialog) {
-      var parent=(StackPanel)((ScrollViewer)dialog.FindName("SettingsScroll")).Content;
+      var parent=(StackPanel)dialog.FindName("SettingsSections");
       var content=new StackPanel();
-      var card=new Border{Child=content,CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(1),Padding=new Thickness(16),Margin=new Thickness(0,0,0,12)};
+      var card=RegisterControl(dialog,"GameLaunchSettingsCard",new Border{Child=content,CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(1),Padding=new Thickness(16),Margin=new Thickness(0,0,0,12)});
       card.SetResourceReference(Border.BackgroundProperty,"ThemeCardBrush");card.SetResourceReference(Border.BorderBrushProperty,"ThemeBorderBrush");
       var title=SettingsLabel(L.T("Game launch"));title.FontSize=16;title.FontWeight=FontWeights.SemiBold;content.Children.Add(title);
       var status=RegisterControl(dialog,"GameLaunchStatus",SettingsLabel(""));status.FontSize=11;status.TextWrapping=TextWrapping.Wrap;status.Margin=new Thickness(0,8,0,12);status.SetResourceReference(TextBlock.ForegroundProperty,"ThemeSecondaryTextBrush");content.Children.Add(status);
@@ -27,7 +27,7 @@ namespace EndfieldWidget {
       var automatic=RegisterControl(dialog,"GamePathAutomatic",new Button{Content=L.T("Use automatic detection"),FontSize=11,Padding=new Thickness(12,7,12,7),MinHeight=32,Margin=new Thickness(0,0,0,4)});
       actions.Children.Add(save);actions.Children.Add(automatic);content.Children.Add(actions);
       var message=RegisterControl(dialog,"GamePathMessage",SettingsLabel(""));message.Visibility=Visibility.Collapsed;message.FontSize=11;message.TextWrapping=TextWrapping.Wrap;message.Margin=new Thickness(0,7,0,0);message.SetResourceReference(TextBlock.ForegroundProperty,"ThemeSoftAccentBrush");content.Children.Add(message);
-      parent.Children.Insert(1,card);
+      parent.Children.Insert(parent.Children.IndexOf((Border)dialog.FindName("AccountSettingsCard"))+1,card);
       int generation=0;bool closed=false,busy=false;dialog.Closed+=(s,e)=>{closed=true;generation++;};
       Func<Task> refresh=async()=>{
         int request=++generation;string path=config.GameExecutablePath??"";status.Text=L.T("Searching for the game…");status.ToolTip=null;

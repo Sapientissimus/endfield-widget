@@ -2,6 +2,7 @@
 
 ## 1.1.0
 
+- Organize Settings with SKPORT account connection directly after language and server selection, followed by game launch. Group the three layout scales together and keep artwork controls in one section.
 - Keep Play, calendar, refresh and settings controls visible without requiring hover or keyboard focus, including Play in compact and mini layouts. Only the close control remains hidden until hover or keyboard focus; per-layout Play visibility settings remain available.
 - Remove animated transitions and their Settings switch. Layouts, opacity changes, operator artwork and calendar navigation now update immediately.
 - Detect installed Endfield copies automatically, including games in additional Steam libraries. Prefer Steam when both Steam and standalone versions are installed.

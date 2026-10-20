@@ -447,16 +447,9 @@ namespace EndfieldWidget {
     }
     void SetupTray() {
       tray=new Forms.NotifyIcon {Icon=System.Drawing.SystemIcons.Application,Text="Endfield",Visible=true};
-      var menu=new Forms.ContextMenuStrip();
-      menu.Items.Add(L.T("Show widget"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>ShowWidget())));
-      menu.Items.Add(L.T("Settings"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>Settings())));
-      menu.Items.Add(L.T("Close"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>Exit())));
-      tray.ContextMenuStrip=menu;
+      tray.ContextMenuStrip=CreateTrayMenu();
       tray.DoubleClick+=(s,e)=>ShowWidget();
       tray.MouseMove+=(s,e)=>UpdateTrayStatus(DateTimeOffset.UtcNow);
-      menu.Items.Insert(1,new Forms.ToolStripMenuItem(L.T("Widget menu"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>ShowMenu()))));
-      BuildTrayPersonalization(menu);
-      BuildGameTrayControl(menu);
       UpdateTrayStatus(DateTimeOffset.UtcNow);
     }
     void InstallDesktopSurface(){desktopSurface=new DesktopSurface(window,()=>config.PositionLocked,UserMoved);desktopSurface.SetClickThrough(config.ClickThrough);desktopSurface.SnapPosition=SnapPosition;desktopSurface.BindDrag(Find<Grid>("DragHandle"));desktopSurface.BindDrag(Find<Grid>("CompactDragHandle"));desktopSurface.BindDrag(Find<Grid>("MicroDragHandle"));}
@@ -467,7 +460,7 @@ namespace EndfieldWidget {
       AdjustBackgroundTimer();
     }
     void Exit() {
-      closing=true; SavePosition(); DisposeExtras(); if(timer!=null)timer.Stop(); if(desktopSurface!=null)desktopSurface.Dispose();if(tray!=null)tray.Dispose();DisposeTrayStatus(); http.Dispose(); window.Close(); Application.Current.Shutdown();
+      closing=true; SavePosition(); DisposeExtras(); if(timer!=null)timer.Stop(); if(desktopSurface!=null)desktopSurface.Dispose();if(tray!=null){var menu=tray.ContextMenuStrip;tray.ContextMenuStrip=null;tray.Dispose();if(menu!=null)menu.Dispose();}DisposeTrayStatus(); http.Dispose(); window.Close(); Application.Current.Shutdown();
     }
     public void Run() {
       window.Show();InitializeBackgroundLoop();UpdateSurfaceState();window.Dispatcher.BeginInvoke(new Action(async()=>await Refresh(true)));
@@ -665,7 +658,7 @@ namespace EndfieldWidget {
           using(var activation=!preview && !smoke?new InstanceActivation(InstanceActivation.Name):null) {
           var app=new Application {ShutdownMode=ShutdownMode.OnExplicitShutdown};
           var widget=new Widget(preview);if(activation!=null){activation.Bind(widget.RequestShowFromLauncher);widget.EnableCrashRecovery(Array.IndexOf(args,"--recovered")>=0);}
-          if(releaseTest)widget.ReleaseTest(args[1]);else if(localizationTest)widget.LocalizationTest(args[1]);else if(featureTest){if(args.Length>3 && args[3]=="calendar")widget.CalendarTest(args[1]);else widget.FeatureTest(args[1]);}else if(featureView)widget.FeatureView(args[1],args.Length>3?args[3]:"");else if(desktopView)widget.DesktopView(args[1]);else if(desktopTest)widget.DesktopTest(args[1],args.Length>3?args[3]:null);else if(inputTest)widget.InputTest(args[1],args.Length>2?args[2]:null);else if(preview)widget.Capture(args[1],settingsPreview,args.Length>2?args[2]:null);else if(smoke)widget.SmokeTest(args[1]);else {widget.Run();if(automatic)widget.RecordAutomaticStartup();CrashRecovery.RuntimeStarted=true;}app.Run();
+          if(releaseTest)widget.ReleaseTest(args[1]);else if(localizationTest)widget.LocalizationTest(args[1]);else if(featureTest){if(args.Length>3 && args[3]=="calendar")widget.CalendarTest(args[1]);else if(args.Length>3 && args[3]=="tray")widget.TrayMenuTest(args[1]);else widget.FeatureTest(args[1]);}else if(featureView)widget.FeatureView(args[1],args.Length>3?args[3]:"");else if(desktopView)widget.DesktopView(args[1]);else if(desktopTest)widget.DesktopTest(args[1],args.Length>3?args[3]:null);else if(inputTest)widget.InputTest(args[1],args.Length>2?args[2]:null);else if(preview)widget.Capture(args[1],settingsPreview,args.Length>2?args[2]:null);else if(smoke)widget.SmokeTest(args[1]);else {widget.Run();if(automatic)widget.RecordAutomaticStartup();CrashRecovery.RuntimeStarted=true;}app.Run();
           }
         }
       } catch(Exception ex) {

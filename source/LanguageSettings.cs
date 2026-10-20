@@ -30,7 +30,11 @@ namespace EndfieldWidget {
       foreach(object child in LogicalTreeHelper.GetChildren(root))if(child is DependencyObject)foreach(var descendant in LanguageElements((DependencyObject)child))yield return descendant;
     }
     void TranslateTray(Forms.ToolStripItemCollection items,string previous) {
-      foreach(Forms.ToolStripItem item in items){item.Text=L.ReText(item.Text,previous);item.ToolTipText=L.ReText(item.ToolTipText,previous);var drop=item as Forms.ToolStripDropDownItem;if(drop!=null)TranslateTray(drop.DropDownItems,previous);}
+      foreach(Forms.ToolStripItem item in items){
+        string key=null;
+        switch(item.Name){case "TrayVisibility":key=window.IsVisible?"Hide widget":"Show widget";break;case "TrayWidgetMenu":key="Widget menu";break;case "TrayClickThrough":key="Click through";break;case "TrayCalendar":key="Calendar";break;case "TraySettings":key="Settings";break;case "TrayClose":key="Close";break;}
+        item.Text=key==null?L.ReText(item.Text,previous):L.T(key);item.ToolTipText=L.ReText(item.ToolTipText,previous);var drop=item as Forms.ToolStripDropDownItem;if(drop!=null)TranslateTray(drop.DropDownItems,previous);
+      }
     }
     void ChangeInterfaceLanguage(string code,Window dialog) {
       code=L.Normalize(code);if(code==config.InterfaceLanguage || closing)return;

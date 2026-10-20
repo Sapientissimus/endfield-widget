@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Style the tray menu to match the widget's operator palette and appearance preset, with vector icons, grouped actions and a version header.
+- Display registered global shortcuts in a separate column. Keep native keyboard navigation, Escape dismissal, click-through check marks and disabled launch states.
+- Adapt menu spacing to display scaling and use system colors in Windows High Contrast. Preserve all seven actions and all fifteen interface languages.
+- Fix ambiguous tray captions when switching between languages that share the same translation for different actions.
+
 ## 1.1.0
 
 - Organize Settings with SKPORT account connection directly after language and server selection, followed by game launch. Group the three layout scales together and keep artwork controls in one section.

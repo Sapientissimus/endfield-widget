@@ -85,9 +85,9 @@ namespace EndfieldWidget {
     }
     void QueueGameLaunch(){gameLaunchTask=LaunchGame();}
     void BuildGameTrayControl(Forms.ContextMenuStrip menu) {
-      trayGamePlay=new Forms.ToolStripMenuItem(L.T("Play"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>QueueGameLaunch())));
+      trayGamePlay=new Forms.ToolStripMenuItem(L.T("Play"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>QueueGameLaunch()))){Name="TrayPlay"};
       int index=Math.Min(4,menu.Items.Count);menu.Items.Insert(index,trayGamePlay);menu.Items.Insert(index+1,new Forms.ToolStripSeparator());
-      menu.Items.Insert(index+1,new Forms.ToolStripMenuItem(L.T("Calendar"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>ShowCalendar()))));
+      menu.Items.Insert(index+1,new Forms.ToolStripMenuItem(L.T("Calendar"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>ShowCalendar()))){Name="TrayCalendar"});
       menu.Opening+=(s,e)=>PollGameActivity(DateTimeOffset.UtcNow);UpdateGameLaunchControls();
     }
     void UpdateGameLaunchControls() {

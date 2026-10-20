@@ -11,6 +11,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test.ps1 -Desktop
 
 Catalog checks validate matching keys across every language, message references in C# and resource references in views. The application suite covers core parsing, interface behavior, all fifteen languages, first-launch defaults and native desktop integration. It renders the widget, settings and calendar for visual inspection. Native checks require an interactive Windows session.
 
+Tray checks render the native menu in every interface language, at several spacing scales and with High Contrast colors. They exercise arrow-key navigation, Escape dismissal and the actual action handlers, using a stub for game launch. The focused subset can also be run with `EndfieldWidget.exe --feature-test <report-path> <isolated-profile-path> tray`.
+
 ## Reliability checks
 
 ```powershell

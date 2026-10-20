@@ -140,6 +140,7 @@ namespace EndfieldWidget {
           await CheckGameLaunch(check,folder);
           await CheckGameDiscovery(check,folder);
           await CheckSmallPlayButtons(check,folder);
+          await CheckTrayMenu(check,folder);
           await CheckStudioFeatures(check,folder);
           CheckContinuityFeatures(check,folder);
           await CheckOptimizationFeatures(check,folder);

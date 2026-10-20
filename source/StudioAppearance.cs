@@ -40,6 +40,7 @@ namespace EndfieldWidget {
         window.Resources["ThemeRaisedBrush"]=new SolidColorBrush(BlendColor(currentTheme.Background,currentTheme.Raised,.65));
       }
       ApplyBackgroundOpacity();
+      UpdateTrayTheme();
     }
     void ApplyTextScale() {
       foreach(var item in originalFonts)item.Key.FontSize=item.Value*config.TextScale;

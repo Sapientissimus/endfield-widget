@@ -1,6 +1,6 @@
 # Endfield Widget
 
-A Windows desktop companion for **Arknights: Endfield**. Version **1.1.0**.
+A Windows desktop companion for **Arknights: Endfield**. Version **1.2.0**.
 
 View Sanity, upcoming events and official announcements without opening the game. The widget stays on the desktop, adapts its colors to the featured operator and displays event times in the Windows time zone.
 
@@ -26,7 +26,7 @@ Actual application views in English with sample account and event data. Click a 
 </table>
 
 <details>
-<summary>Calendar and settings</summary>
+<summary>Calendar, settings and tray menu</summary>
 
 **Calendar** — upcoming dates, filters and official event details.
 
@@ -35,6 +35,10 @@ Actual application views in English with sample account and event data. Click a 
 **Settings** — language, server, layout scale and background opacity.
 
 <a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" width="460" alt="Settings with language and server selection, SKPORT account connection and game launch options"></a>
+
+**Tray menu** — quick actions with the widget's current color palette.
+
+<a href="docs/screenshots/tray.png"><img src="docs/screenshots/tray.png" width="248" alt="Dark tray menu with icons, separate shortcut hints and grouped widget actions"></a>
 
 </details>
 
@@ -46,13 +50,13 @@ Actual application views in English with sample account and event data. Click a 
 - Artwork for the current debut operator, with a matching color palette. Repeat banners do not replace it.
 - Normal, compact and micro layouts with independent scale and appearance settings.
 - Position locking, edge snapping, multiple monitors and desktop placement outside Alt+Tab.
-- Automatic game discovery with Steam priority, a manual launch-path override, tray controls and optional Windows startup.
+- Automatic game discovery with Steam priority, a manual launch-path override, themed tray controls and optional Windows startup.
 - Fifteen interface languages, with official articles matched to the selected language where available.
 
 ## Download
 
 1. Open the [latest release](https://github.com/Sapientissimus/endfield-widget/releases/latest).
-2. Download `EndfieldWidget-Windows-v1.1.0.zip` and extract it to a permanent folder.
+2. Download `EndfieldWidget-Windows-v1.2.0.zip` and extract it to a permanent folder.
 3. Open `EndfieldWidget.exe`.
 4. Open **Settings** to select a language, choose the game server and connect a SKPORT account.
 
@@ -69,6 +73,7 @@ Official dates are available without connecting an account. SKPORT is used to re
 - **Play**, calendar, refresh and settings controls stay visible, including when the pointer is away. Only the close control appears on hover or keyboard focus. Play visibility can still be changed independently for each layout in Settings.
 - Open the calendar from the widget or tray menu. Times follow the current Windows time zone, including daylight-saving changes.
 - Use the tray icon to restore a hidden widget. Launching the application again also shows its existing instance.
+- The tray menu follows the operator palette and appearance preset, with icons and a separate column for available global shortcuts. It supports arrow keys, Escape, display scaling and Windows High Contrast.
 - **Play** looks for Endfield in the registered Steam libraries first, then for the standalone game or official launcher. When both versions are installed, Steam is used. In **Settings → Game launch**, enter a full `.exe` path and choose **Save path**, or use **Browse…** to select it. **Use automatic detection** clears the override. An unavailable manual path is reported rather than silently launching another version.
 - Enable **Start with Windows** to start about 15 seconds after signing in. This creates a task for the current user without elevation or a stored password. Battery use and unavailable network connectivity do not block startup.
 

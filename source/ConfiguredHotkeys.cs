@@ -52,7 +52,7 @@ namespace EndfieldWidget {
       var specs=ParseShortcuts(ShortcutValues());if(specs==null)specs=ParseShortcuts(new[]{"Ctrl+Alt+H","Ctrl+Alt+E","Ctrl+Alt+G","Ctrl+Alt+M","Ctrl+Alt+R"});
       shortcuts.Initial(specs);UpdateShortcutFlags();
     }
-    void UpdateShortcutFlags(){globalToggleKey=shortcuts!=null && shortcuts.Active.ContainsKey(ToggleHotkey);globalMenuKey=shortcuts!=null && shortcuts.Active.ContainsKey(MenuHotkey);if(tray!=null && tray.ContextMenuStrip.Items.Count>1)tray.ContextMenuStrip.Items[1].Text=L.T("Widget menu")+(globalMenuKey?" · "+config.HotkeyMenu:"");UpdateMenu();}
+    void UpdateShortcutFlags(){globalToggleKey=shortcuts!=null && shortcuts.Active.ContainsKey(ToggleHotkey);globalMenuKey=shortcuts!=null && shortcuts.Active.ContainsKey(MenuHotkey);UpdateTrayShortcuts();UpdateMenu();}
     bool SaveShortcuts(string[] values,out string feedback) {
       if(values==null || values.Length!=ShortcutIds.Length){feedback=L.T("Check the shortcut list.");return false;}
       var specs=new List<ShortcutSpec>();

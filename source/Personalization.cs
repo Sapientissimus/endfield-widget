@@ -16,13 +16,13 @@ namespace EndfieldWidget {
       trayVisibility=menu.Items[0] as Forms.ToolStripMenuItem;
       if(trayVisibility!=null) {
         menu.Items.Remove(trayVisibility);trayVisibility.Dispose();
-        trayVisibility=new Forms.ToolStripMenuItem("",null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>ToggleWidget())));menu.Items.Insert(0,trayVisibility);
+        trayVisibility=new Forms.ToolStripMenuItem("",null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>ToggleWidget()))){Name="TrayVisibility"};menu.Items.Insert(0,trayVisibility);
       }
-      trayClickThrough=new Forms.ToolStripMenuItem(L.T("Click through"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>SetClickThrough(!config.ClickThrough))));
+      trayClickThrough=new Forms.ToolStripMenuItem(L.T("Click through"),null,(s,e)=>window.Dispatcher.Invoke(new Action(()=>SetClickThrough(!config.ClickThrough)))){Name="TrayClickThrough"};
       menu.Items.Insert(2,trayClickThrough);menu.Items.Insert(3,new Forms.ToolStripSeparator());UpdateTrayPersonalization();
     }
     void UpdateTrayPersonalization() {
-      if(trayVisibility!=null)trayVisibility.Text=(window.IsVisible?L.T("Hide widget"):L.T("Show widget"))+(globalToggleKey?" · "+config.HotkeyToggle:"");
+      if(trayVisibility!=null){trayVisibility.Text=window.IsVisible?L.T("Hide widget"):L.T("Show widget");trayVisibility.ShortcutKeyDisplayString=globalToggleKey?config.HotkeyToggle:"";}
       if(trayClickThrough!=null)trayClickThrough.Checked=config.ClickThrough;
     }
     Action BindNumber(Window dialog,string name,Func<int> value,Func<int> minimum,Func<int> maximum,Action<int> apply) {

@@ -11,14 +11,14 @@ using System.Text.RegularExpressions;
 [assembly:AssemblyTitle("Endfield Widget")]
 [assembly:AssemblyDescription("Desktop companion for Arknights: Endfield")]
 [assembly:AssemblyProduct("Endfield Widget")]
-[assembly:AssemblyVersion("1.1.0.0")]
-[assembly:AssemblyFileVersion("1.1.0.0")]
-[assembly:AssemblyInformationalVersion("1.1.0")]
+[assembly:AssemblyVersion("1.2.0.0")]
+[assembly:AssemblyFileVersion("1.2.0.0")]
+[assembly:AssemblyInformationalVersion("1.2.0")]
 
 namespace EndfieldWidget {
   static class BuildInfo {
-    public const string Version="1.1.0";
-    public const string Build="3";
+    public const string Version="1.2.0";
+    public const string Build="4";
     static string hash;
     public static string Hash(){if(hash==null)try{using(var stream=File.OpenRead(Assembly.GetExecutingAssembly().Location))using(var sha=SHA256.Create())hash=BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","");}catch{hash="unavailable";}return hash;}
   }

@@ -55,6 +55,11 @@ namespace EndfieldWidget {
       };
       var enTitle=Names(Json.Str(canonical,"data","title"));var localTitle=Names(Json.Str(localized,"data","title"));
       if(enTitle.Length==1 && localTitle.Length==1)vote(enTitle[0],Publications.DisplayText(localTitle[0]),30);
+      // Featured-operator grammar identifies the same role even when translated
+      // item names add nested quotes and prevent positional paragraph matching.
+      string featured=BannerClient.FeaturedName(Quotes(NewsClient.PlainText(Json.Str(canonical,"data","data"))));
+      string localizedFeatured=BannerClient.FeaturedName(Quotes(NewsClient.PlainText(Json.Str(localized,"data","data"))));
+      vote(featured,Publications.DisplayText(localizedFeatured),30);
       foreach(var pair in alignment) {
         var a=Names(english[pair.Key].Text);var b=Names(selected[pair.Value].Text);
         if(a.Length==b.Length)for(int i=0;i<a.Length;i++)vote(a[i],Publications.DisplayText(b[i]),english[pair.Key].Marker.StartsWith("number:")?6:2);

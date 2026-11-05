@@ -10,6 +10,38 @@ using System.Threading.Tasks;
 
 namespace EndfieldWidget {
   partial class Widget {
+    async Task CheckOperatorNameLayout(Action<bool,string> check,string folder) {
+      string saved=Json.Encode(config),language=L.Code;var oldBanners=bannerState;
+      try {
+        L.Set("ru");window.Language=System.Windows.Markup.XmlLanguage.GetLanguage("ru-RU");
+        config.MicroMode=config.Compact=false;config.Scale=1;config.TextScale=1.2;ApplyTextScale();ApplyLayout(true);
+        foreach(string name in new[]{"Си","Argent Flow","Серебристый Поток"}) {
+          var debut=new Debut{Name=name,Key=name=="Си"?"si":"argent-flow",Banner="Звездный поток бежит навстречу очагу",EuropeStart=DateTimeOffset.UtcNow.AddDays(-1),AsiaStart=DateTimeOffset.UtcNow.AddDays(-1)};
+          bannerState=new BannerState{Debuts=new List<Debut>{debut}};Paint();
+          await window.Dispatcher.InvokeAsync(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
+          var label=Find<System.Windows.Controls.TextBlock>("OperatorName");
+          check(label.Text==name.ToUpper(L.Culture) && label.ActualWidth+1>=label.DesiredSize.Width,"The rendered operator label contains the entire updated name at 120 percent text: "+name);
+          SaveImage(window,Path.Combine(folder,"operator-name-"+(name=="Си"?"si":name=="Argent Flow"?"argent":"ru")+".png"));
+        }
+      }finally {
+        var restored=new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Config>(saved);foreach(var property in typeof(Config).GetProperties())if(property.CanRead && property.CanWrite)property.SetValue(config,property.GetValue(restored,null),null);
+        bannerState=oldBanners;currentArtKey="";L.Set(language);window.Language=System.Windows.Markup.XmlLanguage.GetLanguage(L.Culture.Name);ApplyTextScale();Paint();ApplyLayout(true);
+      }
+    }
+    void CheckOperatorNameProjection(Action<bool,string> check,string folder) {
+      string fixtures=Path.Combine(folder,"localization");
+      var english=Json.Decode(File.ReadAllText(Path.Combine(fixtures,"en-us-7012.json")));
+      var russian=Json.Decode(File.ReadAllText(Path.Combine(fixtures,"ru-ru-7012.json")));
+      using(Publications.Enter(Publications.ForLanguage("ru"))) {
+        var projected=LocalizedArticles.Project(english,russian);
+        var notice=BannerClient.ParseNotice(Json.Str(projected,"data","data"),Json.Str(projected,"data","title"),"7012",Json.Num(projected,"data","displayTime"));
+        check(notice.Name=="Серебристый Поток","The dedicated Russian debut retains its official featured operator name when nested item quotes change paragraph name counts");
+        var overview=Json.Decode(File.ReadAllText(Path.Combine(folder,"9560-ru.json")));
+        var earlier=BannerClient.ParseOverview(Json.Str(overview,"data","data"),Json.Str(overview,"data","title"),"9560",1792026000).Single(n=>n.Name=="Серебристый Поток");
+        check(BannerClient.FirstDebuts(new[]{earlier,notice}).Single().Cid=="7012","The dedicated localized notice refines the overview without creating a second debut for the same operator");
+        check(NewsClient.ParseDate(notice.LocalStart,TimeSpan.FromHours(-5),2026).ToUniversalTime()==new DateTimeOffset(2026,11,5,17,0,0,TimeSpan.Zero),"Localized featured-name matching preserves the canonical Europe debut instant");
+      }
+    }
     async Task CheckRussianArticles(Action<bool,string> check,string folder) {
       Func<string,object> fixture=cid=>Json.Decode(File.ReadAllText(Path.Combine(folder,cid+"-ru.json")));
       object overview=fixture("9560"),dedicated=fixture("4489"),preload=fixture("0744");

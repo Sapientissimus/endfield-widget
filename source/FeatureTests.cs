@@ -46,6 +46,8 @@ namespace EndfieldWidget {
         try {
           Directory.CreateDirectory(folder);
           check(Storage.Isolated && startup is MemoryStartupRegistration,"Feature checks use an isolated profile and a memory startup backend");
+          CheckOperatorNameProjection(check,folder);
+          await CheckOperatorNameLayout(check,folder);
           var legacyScale=new JavaScriptSerializer().Deserialize<Config>("{\"Scale\":0.9,\"Compact\":true}");legacyScale.NormalizeScales();
           check(legacyScale.Scale==.9 && legacyScale.CompactScale==.9 && legacyScale.Compact,"An older shared scale is preserved for both modes, including an active compact mode");
           var freshScale=new Config();freshScale.NormalizeScales();

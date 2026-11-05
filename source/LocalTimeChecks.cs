@@ -35,10 +35,10 @@ namespace EndfieldWidget {
         var fixedZone=TimeZoneInfo.CreateCustomTimeZone("fixed-fixture",TimeSpan.FromHours(2),"fixed-fixture","fixed-fixture");Clock.ZoneOverride=()=>fixedZone;
         check(Clock.Local(moment).Offset==TimeSpan.FromHours(2),"A zone without daylight-saving rules does not acquire a guessed seasonal offset");
 
-        var start=new DateTimeOffset(2026,11,5,17,0,0,TimeSpan.Zero);var noticeNow=start.AddMinutes(-30);
+        var start=new DateTimeOffset(DateTimeOffset.UtcNow.Year+1,1,15,17,0,0,TimeSpan.Zero);var noticeNow=start.AddMinutes(-30);string fixtureDate="1/15/"+start.Year;
         var update=new Schedule{Version="Fixture",Source=NewsClient.NewsUrl+"/9560",Checked=noticeNow,Start=start,End=start.AddHours(6)};var options=new Config{NotifyMaintenance=true,MaintenanceLeadMinutes=60};var policy=new NotificationPolicy(null);
         Clock.ZoneOverride=()=>america;var notice=policy.Next(options,null,update,noticeNow,false,true,false);
-        check(notice!=null && notice.Message.Contains("11/5/2026, 12:00–18:00") && notice.Message.EndsWith("12:00–18:00"),"An existing maintenance alert shows local event times without a city label");
+        check(notice!=null && notice.Message.Contains(fixtureDate+", 12:00–18:00") && notice.Message.EndsWith("12:00–18:00"),"An existing maintenance alert shows local event times without a city label");
         policy.Deliver(notice,noticeNow,false,n=>true);Clock.ZoneOverride=()=>TimeZoneInfo.Utc;
         check(policy.Next(options,null,update,noticeNow,false,true,false)==null && policy.History.Sent.Count==1,"Changing display zones does not duplicate an already delivered UTC-keyed maintenance alert");
         var resource=new Sanity{RoleId="fixture",Current=99,Maximum=100,Checked=noticeNow,ServerTime=noticeNow.ToUnixTimeSeconds(),FullAt=start.ToUnixTimeSeconds()};options=new Config{RoleId="fixture",NotifySanity=true};policy=new NotificationPolicy(null);
@@ -49,14 +49,14 @@ namespace EndfieldWidget {
         sanity=new Sanity{RoleId="fixture",Current=93,Maximum=360,Checked=now,ServerTime=now.ToUnixTimeSeconds(),FullAt=now.AddHours(2).ToUnixTimeSeconds()};schedule=update;
         bannerState=new BannerState{Debuts=new List<Debut>{new Debut{Name="Argent Flow",Key="local-fixture",Source=NewsClient.NewsUrl+"/9560",EuropeStart=start,AsiaStart=start}}};
         Clock.ZoneOverride=()=>TimeZoneInfo.Utc;Paint();window.UpdateLayout();int epoch=recovery.Epoch;long resourceDeadline=sanity.FullAt;var originalStart=schedule.Start;
-        check(Find<TextBlock>("NextBannerDate").Text=="11/5/2026 at 17:00","The widget initially formats the stored debut instant in the selected display-zone fixture");
+        check(Find<TextBlock>("NextBannerDate").Text==fixtureDate+" at 17:00","The widget initially formats the stored debut instant in the selected display-zone fixture");
         Clock.ZoneOverride=()=>america;TimeSettingsChanged(null,EventArgs.Empty);await Task.Delay(100);window.UpdateLayout();
-        check(Find<TextBlock>("NextBannerDate").Text=="11/5/2026 at 12:00" && recovery.Epoch==epoch && sanity.FullAt==resourceDeadline && schedule.Start==originalStart,"A time-settings event repaints local dates without changing source timestamps or invalidating account data");
+        check(Find<TextBlock>("NextBannerDate").Text==fixtureDate+" at 12:00" && recovery.Epoch==epoch && sanity.FullAt==resourceDeadline && schedule.Start==originalStart,"A time-settings event repaints local dates without changing source timestamps or invalidating account data");
         check(window.FindName("ClockBlock")==null && window.FindName("ClockLabel")==null && window.FindName("CompactClockLabel")==null && dialog.FindName("ShowClockSwitch")==null,"The full and compact digital clocks and their settings switch are removed");
         check(TimeLabels(window).All(t=>!t.Text.Contains("UTC+") && !t.Text.Contains("GMT+")),"The widget contains no repeated offset badges");
         string before=Find<TextBlock>("RecoveryLabel").Text;window.Hide();var india=TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");Clock.ZoneOverride=()=>india;ApplyLocalTimeSettings();
         check(!window.IsVisible && Find<TextBlock>("RecoveryLabel").Text==before,"A system-zone update does not reveal or repaint a hidden widget");
-        ShowWidget();window.UpdateLayout();check(Find<TextBlock>("NextBannerDate").Text=="11/5/2026 at 22:30","Showing the widget uses the new local zone immediately, including fractional-hour offsets");
+        ShowWidget();window.UpdateLayout();check(Find<TextBlock>("NextBannerDate").Text==fixtureDate+" at 22:30","Showing the widget uses the new local zone immediately, including fractional-hour offsets");
         calendarNow=()=>moment;Clock.ZoneOverride=()=>america;ShowCalendar();((Button)calendarDialog.FindName("CalendarToday")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         check(calendarDay==new DateTime(2026,10,14),"Calendar Today uses the local date even when it differs from the UTC day");
         ApplyLocalTimeSettings();calendarDialog.UpdateLayout();check(TimeLabels(calendarDialog).All(t=>!t.Text.Contains("UTC+") && !t.Text.Contains("GMT+")),"The open calendar refreshes without timezone reminders");

@@ -1,6 +1,6 @@
 # Endfield Widget
 
-A Windows desktop companion for **Arknights: Endfield**. Version **1.2.0**.
+A Windows desktop companion for **Arknights: Endfield**. Version **1.2.1**.
 
 View Sanity, upcoming events and official announcements without opening the game. The widget stays on the desktop, adapts its colors to the featured operator and displays event times in the Windows time zone.
 
@@ -56,7 +56,7 @@ Actual application views in English with sample account and event data. Click a 
 ## Download
 
 1. Open the [latest release](https://github.com/Sapientissimus/endfield-widget/releases/latest).
-2. Download `EndfieldWidget-Windows-v1.2.0.zip` and extract it to a permanent folder.
+2. Download `EndfieldWidget-Windows-v1.2.1.zip` and extract it to a permanent folder.
 3. Open `EndfieldWidget.exe`.
 4. Open **Settings** to select a language, choose the game server and connect a SKPORT account.
 

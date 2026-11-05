@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- Preserve the localized featured operator name when official announcements use nested quotation marks, including the Argent Flow announcement. The name now follows the selected article language without creating a separate English-name entry for the same debut.
+- Add regression coverage for long operator names after banner changes and keep time-zone test fixtures independent of expired event dates.
+
 ## 1.2.0
 
 - Style the tray menu to match the widget's operator palette and appearance preset, with vector icons, grouped actions and a version header.

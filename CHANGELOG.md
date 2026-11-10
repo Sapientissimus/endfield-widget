@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.5
+
+- Expand the calendar with reruns, weapon banners, sign-in events, Sanity Supply and dated milestones from official announcements.
+- Mark starts and ends in the month grid. Resolve maintenance-linked deadlines only when an official time is available.
+- Redesign the calendar with an illustrated header, graphite panels and event thumbnails from official articles.
+- Preserve localized event names in differently formatted headings and nested quotation marks.
+
+All 1,376 standard application checks passed.
+
 ## 1.2.1
 
 - Preserve the localized featured operator name when official announcements use nested quotation marks, including the Argent Flow announcement. The name now follows the selected article language without creating a separate English-name entry for the same debut.

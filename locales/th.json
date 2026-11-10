@@ -1,4 +1,10 @@
 {
+  "Event starts": "เริ่มกิจกรรม",
+  "Milestone": "เหตุการณ์สำคัญ",
+  "Rerun": "ตู้รีรัน",
+  "Weapon banner": "ตู้กาชาอาวุธ",
+  "End date unknown": "ไม่ทราบวันสิ้นสุด",
+  "Started": "เริ่มแล้ว",
   "Undo change": "เลิกทำการเปลี่ยนแปลง",
   "Undo the last appearance change · Ctrl+Z": "เลิกทำการเปลี่ยนรูปลักษณ์ล่าสุด · Ctrl+Z",
   "Previous appearance": "รูปลักษณ์ก่อนหน้า",

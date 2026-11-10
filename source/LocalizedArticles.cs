@@ -14,10 +14,12 @@ namespace EndfieldWidget {
       public string Text,Marker;
       public HashSet<string> Numbers;
       public Paragraph(string text){Text=text;Marker=Mark(text);Numbers=new HashSet<string>(Regex.Matches(text,@"\d+").Cast<Match>().Select(m=>m.Value));}
-      static string Mark(string text){var numbered=Regex.Match(text,@"^\s*(\d+)[.)、．]");if(numbered.Success)return "number:"+numbered.Groups[1].Value;var marker=Regex.Match(text,@"^\s*([■▼※·•・])");return marker.Success?marker.Groups[1].Value.Replace("•","·").Replace("・","·"):"text";}
+      static string Mark(string text){var numbered=Regex.Match(text,@"^\s*(\d+)[.)、．]");if(numbered.Success)return "number:"+numbered.Groups[1].Value;var marker=Regex.Match(text,@"^\s*([■▼※·•・○◦])");return marker.Success?marker.Groups[1].Value.Replace("•","·").Replace("・","·").Replace("◦","○"):"text";}
     }
+    // Match the outer pair as a unit, preserving a second quote style inside the name.
+    static readonly Regex QuotedName=new Regex(@"\[(?<name>[^\[\]\r\n]{1,180})\]|«(?<name>[^«»\r\n]{1,180})»|「(?<name>[^「」\r\n]{1,180})」|【(?<name>[^【】\r\n]{1,180})】|『(?<name>[^『』\r\n]{1,180})』|“(?<name>[^“”\r\n]{1,180})”|［(?<name>[^［］\r\n]{1,180})］");
     public static string Quotes(string value) {
-      return (value??"").Replace('「','[').Replace('」',']').Replace('【','[').Replace('】',']').Replace('『','[').Replace('』',']').Replace('«','[').Replace('»',']').Replace('“','[').Replace('”',']').Replace('［','[').Replace('］',']');
+      return QuotedName.Replace(value??"",m=>"["+m.Groups["name"].Value+"]");
     }
     static List<Paragraph> Paragraphs(string html) {
       var matches=Regex.Matches(html??"",@"<p\b[^>]*>(.*?)</p>",RegexOptions.Singleline|RegexOptions.IgnoreCase);
@@ -43,7 +45,21 @@ namespace EndfieldWidget {
       var result=new Dictionary<int,int>();for(int i=n,j=m;i>0 || j>0;){byte move=moves[i,j];if(move==0){i--;j--;if(Cost(english[i],localized[j])<4)result[i]=j;}else if(move==1)i--;else j--;}
       return result;
     }
-    static string[] Names(string text){return Regex.Matches(Quotes(text),@"\[([^\[\]\r\n]{1,180})\]").Cast<Match>().Select(m=>m.Groups[1].Value.Trim()).ToArray();}
+    static string[] Names(string text){return QuotedName.Matches(text??"").Cast<Match>().Select(m=>m.Groups["name"].Value.Trim()).ToArray();}
+    static string UnquotedHeading(Paragraph canonical,Paragraph localized,bool followsSection) {
+      if(canonical.Marker==localized.Marker && (canonical.Marker=="○" || followsSection)) {
+        var standalone=Regex.Match(Quotes(canonical.Text),@"^(?:[○◦]\s*)?\[[^\[\]\r\n]+\]$");
+        string local=Regex.Replace(localized.Text,@"^[○◦]\s*","").Trim();
+        if(standalone.Success && local.Length>0 && local.Length<=120 && !Regex.IsMatch(local,@"[.!?。！？\r\n]|\d{1,2}:\d{2}"))return local;
+      }
+      // An availability row may translate the entire label without quoting its subject.
+      if(Regex.IsMatch(Quotes(canonical.Text),@"^(?:[·•・]\s*)?\[[^\[\]\r\n]+\]\s+Availability\s*[:：]",RegexOptions.IgnoreCase)
+        && canonical.Numbers.Intersect(localized.Numbers).Any()) {
+        var label=Regex.Match(localized.Text,@"^(?:[·•・]\s*)?(?<label>[^:：\r\n]{1,120})[:：]\s*(?<value>.+)$");
+        if(label.Success && Regex.IsMatch(label.Groups["value"].Value,@"\d{1,2}:\d{2}"))return label.Groups["label"].Value.Trim();
+      }
+      return null;
+    }
     public static object Project(object canonical,object localized) {
       if(Json.Str(canonical,"data","cid")!=Json.Str(localized,"data","cid") || string.IsNullOrWhiteSpace(Json.Str(localized,"data","title")))throw new FormatException("Unmatched localized publication.");
       var english=Paragraphs(Json.Str(canonical,"data","data"));var selected=Paragraphs(Json.Str(localized,"data","data"));
@@ -63,15 +79,24 @@ namespace EndfieldWidget {
       foreach(var pair in alignment) {
         var a=Names(english[pair.Key].Text);var b=Names(selected[pair.Value].Text);
         if(a.Length==b.Length)for(int i=0;i<a.Length;i++)vote(a[i],Publications.DisplayText(b[i]),english[pair.Key].Marker.StartsWith("number:")?6:2);
+        else if(a.Length==1 && b.Length==0) {
+          bool followsSection=pair.Key>0 && pair.Value>0 && english[pair.Key-1].Marker=="■" && selected[pair.Value-1].Marker=="■";
+          vote(a[0],Publications.DisplayText(UnquotedHeading(english[pair.Key],selected[pair.Value],followsSection)),10);
+        }
       }
       var names=votes.ToDictionary(p=>p.Key,p=>p.Value.OrderByDescending(v=>v.Value).ThenBy(v=>v.Key,StringComparer.Ordinal).First().Key,StringComparer.Ordinal);
-      Func<string,string> replace=text=>Regex.Replace(Quotes(text),@"\[([^\[\]\r\n]+)\]",m=>"["+(names.ContainsKey(m.Groups[1].Value)?names[m.Groups[1].Value]:m.Groups[1].Value)+"]");
+      Func<string,string> replace=text=>QuotedName.Replace(text??"",m=>{
+        string original=m.Groups["name"].Value,translated;
+        return "["+(names.TryGetValue(original,out translated)?translated:original)+"]";
+      });
       var translations=new List<Dictionary<string,object>>();var html=new StringBuilder();
       for(int i=0;i<english.Count;i++) {
         string plain=replace(english[i].Text);html.Append("<p>").Append(WebUtility.HtmlEncode(plain).Replace("\n","<br>" )).Append("</p>");int j;
         if(alignment.TryGetValue(i,out j))translations.Add(new Dictionary<string,object>{{"canonical",plain},{"localized",Publications.DisplayText(selected[j].Text)}});
       }
       var data=(Dictionary<string,object>)((Dictionary<string,object>)canonical)["data"];
+      data["calendarArtwork"]=CalendarArtwork.Find(Json.Str(localized,"data","cover"),Json.Str(localized,"data","data"))
+        ??CalendarArtwork.Find(Json.Str(canonical,"data","cover"),Json.Str(canonical,"data","data"));
       data["title"]=replace(Json.Str(canonical,"data","title"));data["data"]=html.ToString();data["translatedParagraphs"]=translations;
       data["localizedTitle"]=Publications.DisplayText(Json.Str(localized,"data","title"));data["publicationCode"]=Publications.Current.Code;
       return canonical;

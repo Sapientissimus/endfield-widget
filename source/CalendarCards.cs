@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace EndfieldWidget {
   sealed class CalendarSourceCommand:ICommand {
@@ -26,16 +27,24 @@ namespace EndfieldWidget {
     public string Id {get{return Entry.Id;}}
     public string Name {get{return Entry.Name??Entry.Title;}}
     public string Category {get{return CalendarData.Label(Entry.Kind);}}
+    public Brush CategoryBrush {get{return CalendarPresentation.BrushFor(Entry.Kind);}}
     public string Icon {get{return CalendarPresentation.Icon(Entry.Kind);}}
     public string TimeText {get;private set;}
     public string Status {get;private set;}
     public string DateHeading {get;private set;}
     public string PeriodText {get;private set;}
-    public string PeriodLabel {get{return Entry.PeriodStart.HasValue && Entry.PeriodEnd.HasValue?L.T("PERIOD"):Entry.Kind==CalendarKind.EventEnd || Entry.Kind==CalendarKind.BannerEnd?L.T("END"):L.T("START");}}
+    public string PeriodLabel {get{return Entry.PeriodStart.HasValue && Entry.PeriodEnd.HasValue?L.T("PERIOD"):L.T(CalendarData.IsEnd(Entry.Kind)?"END":"START");}}
     readonly Func<CalendarEntry,CalendarDetailState> detailFactory;
     CalendarDetailState details;
     public CalendarDetailState Details {get{return details??(details=detailFactory(Entry));}}
     public string Source {get{return Entry.Source;}}
+    public ImageSource Artwork {get;private set;}
+    public string ArtworkCaption {get;private set;}
+    internal string ArtworkRequestedUrl;
+    internal void SetArtwork(ImageSource value,string caption) {
+      if(ArtworkCaption!=caption){ArtworkCaption=caption;Changed("ArtworkCaption");}
+      if(Artwork!=value){Artwork=value;Changed("Artwork");}
+    }
     public string AccessibleName {get{return Category+" · "+Name+" · "+TimeText+L.T(" · Open official announcement");}}
     public object SourceTarget {get{return Entry;}}
     public ICommand OpenSource {get;private set;}
@@ -54,6 +63,21 @@ namespace EndfieldWidget {
     void Changed(string name){var handler=PropertyChanged;if(handler!=null)handler(this,new PropertyChangedEventArgs(name));}
   }
   static class CalendarPresentation {
+    static readonly Brush EventBrush=Tone(255,203,87),MaintenanceBrush=Tone(207,171,250),DebutBrush=Tone(148,218,241),DeadlineBrush=Tone(248,166,168);
+    static Brush Tone(byte red,byte green,byte blue){var brush=new SolidColorBrush(Color.FromRgb(red,green,blue));brush.Freeze();return brush;}
+    public static Brush BrushFor(CalendarKind kind) {
+      if(System.Windows.SystemParameters.HighContrast)return System.Windows.SystemColors.WindowTextBrush;
+      switch(kind) {
+        case CalendarKind.Maintenance:return MaintenanceBrush;
+        case CalendarKind.Debut:
+        case CalendarKind.RerunStart:
+        case CalendarKind.WeaponStart:return DebutBrush;
+        case CalendarKind.BannerEnd:
+        case CalendarKind.RerunEnd:
+        case CalendarKind.WeaponEnd:return DeadlineBrush;
+        default:return EventBrush;
+      }
+    }
     public static string Heading(DateTime day,DateTime today) {
       var culture=L.Culture;string date=L.DateCaption(day,false);
       if(day.Date==today.Date)return L.T("Today · ")+date;
@@ -61,20 +85,33 @@ namespace EndfieldWidget {
       string title=day.ToString("dddd",culture)+", "+date;return char.ToUpper(title[0],culture)+title.Substring(1);
     }
     public static string Time(CalendarEntry entry) {
-      if(!entry.End.HasValue)return Clock.Time(entry.At);
-      if(Clock.Local(entry.At).Date==Clock.Local(entry.End.Value).Date)return Clock.Time(entry.At)+"–"+Clock.Time(entry.End.Value);
-      return Clock.Date(entry.At)+" · "+Clock.Time(entry.At)+" → "+Clock.Date(entry.End.Value)+" · "+Clock.Time(entry.End.Value);
+      var end=entry.RangeEnd;
+      if(!end.HasValue)return Clock.Time(entry.At);
+      if(Clock.Local(entry.At).Date==Clock.Local(end.Value).Date)return Clock.Time(entry.At)+"–"+Clock.Time(end.Value);
+      return Clock.Date(entry.At)+" · "+Clock.Time(entry.At)+" → "+Clock.Date(end.Value)+" · "+Clock.Time(end.Value);
     }
     public static string Status(CalendarEntry entry,DateTimeOffset now) {
-      if(entry.End.HasValue && entry.At<=now && entry.End>now)return L.T("Ongoing · until ")+(Clock.Local(entry.End.Value).Date==Clock.Local(now).Date?Clock.Time(entry.End.Value):Clock.Date(entry.End.Value)+" · "+Clock.Time(entry.End.Value));
-      if(entry.At>now)return (entry.Kind==CalendarKind.BannerEnd || entry.Kind==CalendarKind.EventEnd?L.T("Ends in "):L.T("Starts in "))+Clock.After(entry.At-now);
-      return entry.Kind==CalendarKind.Debut?L.T("Debut has started"):L.T("Ended");
+      bool deadline=CalendarData.IsEnd(entry.Kind);
+      var end=entry.RangeEnd;
+      bool missingEnd=(entry.Kind==CalendarKind.Debut || entry.Kind==CalendarKind.EventStart || entry.Kind==CalendarKind.RerunStart || entry.Kind==CalendarKind.WeaponStart) && !end.HasValue;
+      if(entry.At>now)return L.T(deadline?"Ends in ":"Starts in ")+Clock.After(entry.At-now)+(missingEnd?" · "+L.T("End date unknown"):"");
+      if(end.HasValue && end>now)return L.T("Ongoing · until ")+(Clock.Local(end.Value).Date==Clock.Local(now).Date?Clock.Time(end.Value):Clock.Date(end.Value)+" · "+Clock.Time(end.Value));
+      if(entry.Kind==CalendarKind.Debut && missingEnd)return L.T("Debut has started")+" · "+L.T("End date unknown");
+      if(missingEnd)return L.T("End date unknown");
+      if(entry.Kind==CalendarKind.Milestone)return L.T("Started");
+      return L.T("Ended");
     }
     public static string Icon(CalendarKind kind) {
       switch(kind) {
         case CalendarKind.Maintenance:return "M7,0 L14,7 L7,14 L0,7 Z M7,4 L7,8 M7,10 L7.01,10";
         case CalendarKind.Debut:return "M7,0 L9,5 L14,5 L10,8 L12,14 L7,10 L2,14 L4,8 L0,5 L5,5 Z";
         case CalendarKind.BannerEnd:return "M1,1 L13,1 L13,13 L1,13 Z M4,4 L10,10 M10,4 L4,10";
+        case CalendarKind.EventStart:return "M1,1 L13,7 L1,13 Z";
+        case CalendarKind.Milestone:return "M3,13 L3,1 L12,1 L9,4 L12,7 L3,7";
+        case CalendarKind.RerunStart:
+        case CalendarKind.RerunEnd:return "M12,4 A5,5 0 1 0 12,10 M12,0 L12,5 L7,5";
+        case CalendarKind.WeaponStart:
+        case CalendarKind.WeaponEnd:return "M2,12 L12,2 M7,2 L12,2 L12,7 M1,7 L7,13";
         default:return "M1,1 L13,1 L13,13 L1,13 Z M4,7 L6,9 L10,5";
       }
     }

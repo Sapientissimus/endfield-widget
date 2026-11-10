@@ -42,16 +42,18 @@ namespace EndfieldWidget {
       Storage.Write("event-roundtrip.json",state);var roundtrip=Storage.Read<BannerState>("event-roundtrip.json");
       check(roundtrip.GameEvents.Count==4 && roundtrip.GameEvents.Single(e=>e.Name==camera.Name).EuropeEndUnix==camera.EuropeEndUnix,"Confirmed event dates survive an isolated cache save and restart-shaped read");
       state.GameEvents.Add(new GameEvent{Name="Untrusted",Source="https://example.com/12345",EuropeEndUnix=camera.EuropeEndUnix});state.GameEvents.Add(new GameEvent{Name="Unknown",Source=NewsClient.NewsUrl+"/12345"});
-      check(CalendarData.Entries(null,state,false).Count==4,"Unverified sources and unknown deadlines cannot enter the calendar from cached data");
+      check(CalendarData.Entries(null,state,false).All(e=>e.Name!="Untrusted" && e.Name!="Unknown"),"Unverified sources and undated cached records cannot enter the calendar");
       var previousZone=Clock.ZoneOverride;var oldBanners=bannerState;var oldSchedule=schedule;string oldRegion=config.BannerRegion;var oldNow=calendarNow;
       try {
         var zone=TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");Clock.ZoneOverride=()=>zone;
-        check(CalendarData.OnDay(CalendarData.Entries(null,state,true),new DateTime(2026,11,4)).Any(e=>e.Title.Contains(camera.Name)) && !CalendarData.OnDay(CalendarData.Entries(null,state,true),new DateTime(2026,11,5)).Any(e=>e.Title.Contains(camera.Name)),"Calendar end markers follow the local day for the selected game server");
+        check(CalendarData.OnDay(CalendarData.Entries(null,state,true),new DateTime(2026,11,4)).Any(e=>e.Kind==CalendarKind.EventEnd && e.Name==camera.Name) && !CalendarData.OnDay(CalendarData.Entries(null,state,true),new DateTime(2026,11,5)).Any(e=>e.Kind==CalendarKind.EventEnd && e.Name==camera.Name),"Calendar end markers follow the local day for the selected game server");
         var utc=TimeZoneInfo.Utc;Clock.ZoneOverride=()=>utc;var entries=CalendarData.Entries(null,state,false);
-        check(entries.All(e=>!e.End.HasValue && e.Title.StartsWith("Event ends · ")) && CalendarData.NearestDay(entries,new DateTimeOffset(2026,11,5,0,0,0,TimeSpan.Zero))==new DateTime(2026,11,5),"Only completion days are marked and existing nearest-event navigation finds them");
+        var cameraEntries=entries.Where(e=>e.Name==camera.Name).ToList();
+        check(cameraEntries.Any(e=>e.Kind==CalendarKind.EventStart) && cameraEntries.Any(e=>e.Kind==CalendarKind.EventEnd) && CalendarData.NearestDay(cameraEntries,new DateTimeOffset(2026,11,5,0,0,0,TimeSpan.Zero))==new DateTime(2026,11,5),"The event has independent start and end entries and nearest navigation finds the upcoming deadline");
         bannerState=state;schedule=null;config.BannerRegion="Europe";calendarNow=()=>new DateTimeOffset(2026,11,1,0,0,0,TimeSpan.Zero);ShowCalendar();SelectCalendarDay(new DateTime(2026,11,5));calendarDialog.UpdateLayout();
         var panel=(ListBox)calendarDialog.FindName("CalendarEvents");
-        check(panel.Items.OfType<CalendarCardModel>().Count()==2 && panel.Items.OfType<CalendarCardModel>().All(m=>m.Category=="Event ends"),"The actual calendar shows both official event endings on the same selected day");
+        var endings=panel.Items.OfType<CalendarCardModel>().Where(m=>m.Entry.Kind==CalendarKind.EventEnd).ToList();
+        check(endings.Any(m=>m.Name==camera.Name) && endings.Count>=2,"The actual calendar shows multiple official event endings on the same selected day");
         SaveImage(calendarDialog,Path.Combine(folder,"calendar-game-events.png"));calendarDialog.Close();
       }finally {if(calendarDialog!=null)calendarDialog.Close();Clock.ZoneOverride=previousZone;bannerState=oldBanners;schedule=oldSchedule;config.BannerRegion=oldRegion;calendarNow=oldNow;}
       var previous=new BannerState{GameEvents=new List<GameEvent>{new GameEvent{Name="Cached gameplay",Source=NewsClient.NewsUrl+"/12345",Published=1792026000,EuropeEndUnix=camera.EuropeEndUnix}}};

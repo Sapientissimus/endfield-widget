@@ -20,7 +20,8 @@ namespace EndfieldWidget {
         var expected=new DateTimeOffset(feed.EventEnd,TimeSpan.FromHours(-5)).ToUniversalTime();
         check(!failed && events.Count==1 && events[0].Name==feed.Name && events[0].Source==NewsClient.NewsUrl+"/"+feed.Cid && events[0].End(false)==expected && events[0].End(true)==new DateTimeOffset(feed.EventEnd,TimeSpan.FromHours(8)).ToUniversalTime(),"A newly discovered name, article ID and deadline years after the build are read without a bundled date table");
         var previous=new BannerState{GameEvents=events};var entries=CalendarData.Entries(null,previous,false);
-        check(entries.Count==1 && entries[0].Title.EndsWith(feed.Name) && entries[0].At==expected,"An automatically discovered future deadline reaches the existing calendar");
+        var ending=entries.Single(e=>e.Kind==CalendarKind.EventEnd);
+        check(ending.Name==feed.Name && ending.At==expected,"An automatically discovered future deadline reaches the calendar");
         feed.EventEnd=feed.EventEnd.AddHours(3);failed=false;events=new List<GameEvent>();
         await client.AddGameEventArticles(archive,previous,events,()=>failed=true);
         check(!failed && events.Count==1 && events[0].End(false)==expected.AddHours(3),"A later refresh automatically replaces a corrected official deadline");

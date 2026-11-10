@@ -49,7 +49,7 @@ namespace EndfieldWidget {
         check(CalendarDetailsData.Key(corrected)!=parsed.Key,"A corrected event date cannot reuse a brief cached for the old occurrence");
         var alien=new CalendarEntry{Name="New Machine",Source="https://example.com/1",At=now};rejected=false;try{CalendarDetailsData.Parse(html,"[New Machine] Challenge Event Details",alien,now);}catch(FormatException){rejected=true;}
         check(rejected,"Untrusted detail URLs are rejected before fetching or displaying content");
-        calendarNow=()=>now;calendarFeed=null;schedule=null;bannerState=new BannerState{GameEvents=new List<GameEvent>{CalendarEvent(entry.Name,"80010",now.AddDays(-1),now.AddDays(1),entry.At)}};calendarRemembered=false;calendarQuery="";calendarFilterMask=15;calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();
+        calendarNow=()=>now;calendarFeed=null;schedule=null;bannerState=new BannerState{GameEvents=new List<GameEvent>{CalendarEvent(entry.Name,"80010",now.AddDays(-1),now.AddDays(1),entry.At)}};calendarRemembered=false;calendarQuery="";calendarFilterMask=CalendarData.Mask(CalendarKind.EventEnd);calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();
         int requests=0;var pending=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>{requests++;return pending.Task;};
         ShowCalendar();SelectCalendarDay(entry.At.Date);calendarDialog.UpdateLayout();await calendarDialog.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
         var day=calendarDayModels.Single();var agenda=calendarAgendaModels.Single();var state=day.Details;
@@ -73,7 +73,7 @@ namespace EndfieldWidget {
         check(state.Description.Contains("facility") && state.Notice.Contains("saved") && state.RetryVisibility==Visibility.Visible,"An offline refresh keeps the previously confirmed description and offers retry");
         var late=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>late.Task;state.Retry.Execute(null);calendarDialog.Close();late.SetResult(parsed);await Task.Delay(30);
         check(calendarDialog==null && calendarDetailStates.Count==0,"Closing the calendar discards view state and safely ignores late detail responses");
-        calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();calendarDetailFetchOverride=e=>Task.FromException<CalendarDetailRecord>(new HttpRequestException("offline"));ShowCalendar();SelectCalendarDay(entry.At.Date);var missing=calendarDayModels.Single().Details;missing.IsExpanded=true;await Task.Delay(30);
+        calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();calendarDetailFetchOverride=e=>Task.FromException<CalendarDetailRecord>(new HttpRequestException("offline"));ShowCalendar();SelectCalendarDay(entry.At.Date);var missing=calendarDayModels.Single(m=>m.Entry.Kind==CalendarKind.EventEnd).Details;missing.IsExpanded=true;await Task.Delay(30);
         check(missing.Description=="" && missing.RetryVisibility==Visibility.Visible && missing.Notice.Contains("Could not"),"A failed uncached request shows a clear failure instead of fabricated event content");
         calendarDetailFetchOverride=e=>Task.FromResult(parsed);missing.Retry.Execute(null);await Task.Delay(30);check(missing.Description.Contains("facility") && missing.RetryVisibility==Visibility.Collapsed,"Retry recovers inline details without reopening the calendar");
         SaveImage(calendarDialog,Path.Combine(folder,"calendar-details-recovered.png"));

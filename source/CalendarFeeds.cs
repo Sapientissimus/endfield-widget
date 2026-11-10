@@ -12,6 +12,9 @@ using System.Web.Script.Serialization;
 namespace EndfieldWidget {
   public sealed class CalendarSourceState {
     public string Source {get;set;}
+    public string ArtworkUrl {get;set;}
+    public string ArtworkTitle {get;set;}
+    public bool IsVersionOverview {get;set;}
     public long Published {get;set;}
     public DateTimeOffset LastSuccess {get;set;}
     public DateTimeOffset LastAttempt {get;set;}
@@ -34,9 +37,11 @@ namespace EndfieldWidget {
     public static CalendarFeedState FromSources(IEnumerable<CalendarSourceState> sources,DateTimeOffset now,int successes,bool failed) {
       var list=sources.Where(s=>s!=null && CalendarData.Official(s.Source)).ToList();
       var withdrawn=list.SelectMany(s=>(s.WithdrawnNames??new List<string>()).Select(n=>new{ Name=CalendarData.Normalize(n),Published=s.Published})).ToList();
+      var schedules=list.Where(s=>s.Maintenance!=null && s.Maintenance.Source==s.Source).Select(s=>s.Maintenance).ToList();
       var events=list.SelectMany(s=>(s.Events??new List<GameEvent>()).Where(e=>e!=null && e.Source==s.Source))
-        .Where(e=>!withdrawn.Any(w=>w.Name==CalendarData.Normalize(e.Name) && w.Published>=e.Published && w.Published-e.Published<=86400L*45));
-      return new CalendarFeedState{PublicationCode=Publications.Current.Code,Schema=CurrentSchema,Checked=now,Partial=failed || list.Any(s=>!string.IsNullOrEmpty(s.Problem)),SuccessCount=successes,Sources=list,Events=GameEventDates.Latest(events),Schedules=list.Where(s=>s.Maintenance!=null && s.Maintenance.Source==s.Source).Select(s=>s.Maintenance).ToList()};
+        .Where(e=>!withdrawn.Any(w=>w.Name==CalendarData.Normalize(e.Name) && w.Published>=e.Published && w.Published-e.Published<=86400L*45))
+        .Select(e=>e.WithMaintenanceEnd(schedules));
+      return new CalendarFeedState{PublicationCode=Publications.Current.Code,Schema=CurrentSchema,Checked=now,Partial=failed || list.Any(s=>!string.IsNullOrEmpty(s.Problem)),SuccessCount=successes,Sources=list,Events=GameEventDates.Latest(events),Schedules=schedules};
     }
     public static CalendarFeedState Seed(BannerState banners) {
       var events=banners==null || banners.GameEvents==null?new List<GameEvent>():banners.GameEvents;
@@ -48,7 +53,7 @@ namespace EndfieldWidget {
     static string Filename {get{return Publications.Cache("calendar");}}
     internal static bool Valid(CalendarFeedState value) {
       if(value==null || value.Schema!=CalendarFeedState.CurrentSchema || value.Sources==null || value.Sources.Count>96)return false;
-      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160)) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
+      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160)) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
     }
     static CalendarFeedState Read(string path) {
       try{if(new FileInfo(path).Length>4000000)return null;var state=new JavaScriptSerializer{MaxJsonLength=4000000}.Deserialize<CalendarFeedState>(File.ReadAllText(path,Encoding.UTF8));if(!Valid(state))return null;var restored=CalendarFeedState.FromSources(state.Sources,state.Checked,0,state.Partial);restored.PublicationCode=state.PublicationCode??Publications.Current.Code;return restored;}catch{return null;}
@@ -75,9 +80,9 @@ namespace EndfieldWidget {
         return CalendarFeedState.FromSources(copied,now,0,true);
       }
       var candidates=archive.Where(a=>IsOverviewTitle(Json.Str(a,"title"))).Take(3)
-        .Concat(archive.Where(a=>GameEventDates.Eligible(Json.Str(a,"title"))).Take(12))
+        .Concat(archive.Where(a=>GameEventDates.CalendarEligible(Json.Str(a,"title"))).Take(24))
         .Concat(archive.Where(a=>ArticleLanguage.MaintenanceTitle(Json.Str(a,"title"))).Take(5)).ToList();
-      foreach(var old in previous.Sources??new List<CalendarSourceState>())if((old.Events??new List<GameEvent>()).Any(e=>e!=null && (e.End(false)>now || e.End(true)>now))) {
+      foreach(var old in previous.Sources??new List<CalendarSourceState>())if((old.Events??new List<GameEvent>()).Any(e=>e!=null && (e.End(false)>now || e.End(true)>now || e.EuropeStartUnix>now.ToUnixTimeSeconds() || e.AsiaStartUnix>now.ToUnixTimeSeconds()))) {
         string cid=old.Source.Substring(old.Source.LastIndexOf('/')+1);var article=archive.FirstOrDefault(a=>Json.Str(a,"cid")==cid);if(article!=null)candidates.Add(article);
       }
       candidates=candidates.GroupBy(a=>Json.Str(a,"cid")).Select(g=>g.First()).Take(64).ToList();
@@ -87,28 +92,36 @@ namespace EndfieldWidget {
           try{return await FetchCalendarSource(article,previous,now).ConfigureAwait(false);}finally{throttle.Release();}
         }).ToArray();
         var sources=await Task.WhenAll(tasks).ConfigureAwait(false);
-        return CalendarFeedState.FromSources(sources,now,sources.Count(s=>s.LastSuccess==now),sources.Length==0);
+        return CalendarFeedState.FromSources(sources,now,sources.Count(s=>s!=null && s.LastSuccess==now),sources.Length==0);
       }
     }
     static CalendarSourceState CopyCalendarSource(CalendarSourceState value,DateTimeOffset now,string problem) {
-      return new CalendarSourceState{Source=value.Source,Published=value.Published,LastSuccess=value.LastSuccess,LastAttempt=now,Problem=problem,Undated=value.Undated,Events=value.Events,Maintenance=value.Maintenance,WithdrawnNames=value.WithdrawnNames};
+      return new CalendarSourceState{Source=value.Source,ArtworkUrl=value.ArtworkUrl,ArtworkTitle=value.ArtworkTitle,IsVersionOverview=value.IsVersionOverview,Published=value.Published,LastSuccess=value.LastSuccess,LastAttempt=now,Problem=problem,Undated=value.Undated,Events=value.Events,Maintenance=value.Maintenance,WithdrawnNames=value.WithdrawnNames};
     }
     async Task<CalendarSourceState> FetchCalendarSource(Dictionary<string,object> article,CalendarFeedState previous,DateTimeOffset now) {
       string cid=Json.Str(article,"cid"),title=Json.Str(article,"title"),url=NewsClient.NewsUrl+"/"+cid;long published=Json.Num(article,"displayTime");
       var old=(previous.Sources??new List<CalendarSourceState>()).FirstOrDefault(s=>s.Source==url)??new CalendarSourceState{Source=url,Events=new List<GameEvent>()};
       var state=CopyCalendarSource(old,now,null);state.Published=published;state.Undated=false;
+      string archiveTitle=title;
       try {
         var response=await Read(Api+"/"+cid+"?"+Query).ConfigureAwait(false);string html=Json.Str(response,"data","data"),text=NewsClient.StructuredText(html);title=FetchedTitle(response,article);
         if(string.IsNullOrWhiteSpace(text))throw new FormatException("Empty official article.");
-        if(IsOverviewTitle(title) || GameEventDates.Eligible(title)) {
-          try {
-            var events=GameEventDates.Parse(html,title,cid,published);state.Events=events;
-            var names=GameEventDates.DeclaredNames(html,title);state.WithdrawnNames=names.Where(n=>!events.Any(e=>CalendarData.Normalize(e.Name)==CalendarData.Normalize(n))).ToList();state.Undated=state.WithdrawnNames.Count>0;
-          }catch(FormatException){state.Problem="format";}
-        }
+        state.IsVersionOverview=IsOverviewTitle(title);
+        state.ArtworkUrl=CalendarArtwork.Find(Json.Str(response,"data","calendarArtwork"),null)
+          ??CalendarArtwork.Find(Json.Str(response,"data","cover"),html);
+        var artworkTitle=Json.Str(response,"data","localizedTitle");
+        if(string.IsNullOrWhiteSpace(artworkTitle))artworkTitle=title;
+        state.ArtworkTitle=string.IsNullOrWhiteSpace(artworkTitle)?null:artworkTitle.Substring(0,Math.Min(200,artworkTitle.Length));
         if(IsOverviewTitle(title) || ArticleLanguage.MaintenanceTitle(title)) {
           try{state.Maintenance=NewsClient.ParseSchedule(html,title,url,DateTimeOffset.FromUnixTimeSeconds(published));state.Maintenance.PublishedUnix=published;}
           catch(FormatException){if(Regex.IsMatch(text,@"Server[^\r\n]*UTC",RegexOptions.IgnoreCase))state.Problem="format";else{state.Maintenance=null;state.Undated=true;}}
+        }
+        if(IsOverviewTitle(title) || GameEventDates.CalendarEligible(title) || GameEventDates.CalendarEligible(archiveTitle)) {
+          try {
+            var events=GameEventDates.ParseCalendar(html,title,cid,published,state.Maintenance,archiveTitle);state.Events=events;
+            if(BannerClient.IsDebutTitle(title) && events.Count==0)return null;
+            var names=GameEventDates.DeclaredNames(html,title);state.WithdrawnNames=names.Where(n=>!events.Any(e=>CalendarData.Normalize(e.Name)==CalendarData.Normalize(n))).ToList();state.Undated=state.Undated || state.WithdrawnNames.Count>0;
+          }catch(FormatException){state.Problem="format";}
         }
         if(state.Problem==null)state.LastSuccess=now;
       }catch(Exception error){state.Problem=CalendarProblem(error);}

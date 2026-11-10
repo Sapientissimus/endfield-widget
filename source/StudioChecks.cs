@@ -41,7 +41,7 @@ namespace EndfieldWidget {
       var state=new BannerState {Debuts=new List<Debut>{debut,new Debut{Name="Si",Source=NewsClient.NewsUrl+"/9999",EuropeStart=start.AddDays(100),AsiaStart=start.AddDays(100)},new Debut{Name="Fake",Source="https://example.com/",EuropeStart=start}}};
       var entries=CalendarData.Entries(null,state,false);
       check(entries.Count==2 && entries.All(e=>e.Title.Contains("Si")),"The calendar excludes repeated operators and unofficial entries while retaining the original debut and its confirmed end");
-      check(CalendarData.OnDay(entries,new DateTime(2026,11,5)).Count()==1 && CalendarData.OnDay(entries,new DateTime(2026,11,6)).Count()==0,"Calendar event days follow Eastern European dates rather than machine-local or UTC dates");
+      check(CalendarData.OnDay(entries,new DateTime(2026,11,5)).Any(e=>e.Kind==CalendarKind.BannerEnd) && CalendarData.OnDay(entries,new DateTime(2026,11,6)).Count()==0,"The banner deadline and its grid range end on the correct Eastern European date");
       debut.EuropeEndUnix=0;check(CalendarData.Entries(null,state,false).Count==1,"Unknown banner ends do not produce calendar events");
       var night=new Schedule{Version="Overnight",Source=NewsClient.NewsUrl+"/1234",Start=new DateTimeOffset(2026,11,1,21,0,0,TimeSpan.Zero),End=new DateTimeOffset(2026,11,2,2,0,0,TimeSpan.Zero)};
       var overnight=CalendarData.Entries(night,null,false);check(CalendarData.OnDay(overnight,new DateTime(2026,11,1)).Any() && CalendarData.OnDay(overnight,new DateTime(2026,11,2)).Any(),"An overnight maintenance period appears on both affected Eastern European dates");

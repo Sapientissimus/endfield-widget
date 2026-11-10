@@ -18,6 +18,19 @@ using Microsoft.Win32;
 using Forms=System.Windows.Forms;
 
 namespace EndfieldWidget {
+  public sealed class CalendarArtworkImage : Image {
+    public CalendarArtworkImage() {
+      Loaded+=(s,e)=>RequestArtwork();
+      DataContextChanged+=(s,e)=>{if(IsLoaded)RequestArtwork();};
+    }
+    internal void RequestArtwork() {
+      var card=DataContext as CalendarCardModel;
+      var window=Window.GetWindow(this);
+      var widget=window==null?null:window.DataContext as Widget;
+      if(card!=null && widget!=null)widget.LoadCalendarArtwork(card);
+    }
+  }
+
   partial class Widget {
     Window calendarDialog;
     DateTime calendarMonth,calendarDay;
@@ -64,13 +77,16 @@ namespace EndfieldWidget {
 
     void ShowCalendar() {
       if(calendarDialog!=null && calendarDialog.IsVisible){calendarDialog.Activate();return;}
-      var dialog=CreateCalendarWindow();dialog.Language=System.Windows.Markup.XmlLanguage.GetLanguage(L.Culture.Name);calendarDialog=dialog;CalendarChrome.Apply(dialog);
+      var dialog=CreateCalendarWindow();dialog.Language=System.Windows.Markup.XmlLanguage.GetLanguage(L.Culture.Name);dialog.DataContext=this;calendarDialog=dialog;CalendarChrome.Apply(dialog);
       if(!calendarRemembered){calendarDay=Clock.Local(calendarNow()).Date;calendarMonth=new DateTime(calendarDay.Year,calendarDay.Month,1);calendarRemembered=true;}
       calendarGridStamp=calendarDayStamp=calendarAgendaStamp="";
       calendarDayVisuals.Clear();calendarDayModels=new List<CalendarCardModel>();calendarAgendaModels=new List<CalendarCardModel>();
       if(calendarSourceCommand==null)calendarSourceCommand=new CalendarSourceCommand(OpenCalendarSource);
       InitializeCalendarTemplates();
-      CalendarFind<Image>("CalendarOperatorImage").SetBinding(Image.SourceProperty,new Binding("Source"){Source=Find<Image>("OperatorImage"),Mode=BindingMode.OneWay});
+      CalendarFind<Ellipse>("CalendarEventDot").Fill=CalendarPresentation.BrushFor(CalendarKind.EventStart);
+      CalendarFind<Ellipse>("CalendarMaintenanceDot").Fill=CalendarPresentation.BrushFor(CalendarKind.Maintenance);
+      CalendarFind<Ellipse>("CalendarDebutDot").Fill=CalendarPresentation.BrushFor(CalendarKind.Debut);
+      CalendarFind<Ellipse>("CalendarBannerEndDot").Fill=CalendarPresentation.BrushFor(CalendarKind.BannerEnd);
       CalendarFind<ListBox>("CalendarAgenda").ItemTemplate=calendarAgendaTemplate;
       CalendarFind<ListBox>("CalendarEvents").ItemTemplate=calendarCardTemplate;
       CalendarScrolling.Attach(CalendarFind<ListBox>("CalendarEvents"));
@@ -94,7 +110,7 @@ namespace EndfieldWidget {
       CalendarFind<Button>("CalendarPickerApply").Click+=(s,e)=>ApplyCalendarPicker();
       var monthPicker=CalendarFind<ComboBox>("CalendarPickerMonth");var culture=L.Culture;
       monthPicker.ItemsSource=Enumerable.Range(1,12).Select(m=>culture.DateTimeFormat.GetMonthName(m)).ToArray();
-      foreach(string name in new[]{"CalendarAll","CalendarMaintenance","CalendarDebuts","CalendarBannerEnds","CalendarEventEnds"})CalendarFind<ToggleButton>(name).Click+=CalendarFilterClicked;
+      foreach(ToggleButton filter in CalendarFind<WrapPanel>("CalendarFilters").Children)filter.Click+=CalendarFilterClicked;
       CalendarFind<UniformGrid>("CalendarDays").PreviewKeyDown+=CalendarDayKey;
       CalendarFind<ListBox>("CalendarAgenda").SelectionChanged+=(s,e)=>{
         if(calendarRendering)return;var model=CalendarFind<ListBox>("CalendarAgenda").SelectedItem as CalendarCardModel;
@@ -110,7 +126,7 @@ namespace EndfieldWidget {
       };
       dialog.SizeChanged+=(s,e)=>{LayoutCalendar();if(!calendarPositioning && dialog.IsVisible)ClampCalendarWindow();};
       dialog.Closed+=(s,e)=>ReleaseCalendar(dialog);
-      dialog.Loaded+=(s,e)=>{LayoutCalendar();if(!preview && !Storage.Isolated)ClampCalendarWindow();};
+      dialog.Loaded+=(s,e)=>{LayoutCalendar();LoadCalendarHeroArtwork(CalendarFind<Image>("CalendarHeroImage"));if(!preview && !Storage.Isolated)ClampCalendarWindow();};
       DesktopNative.HideFromSwitcher(dialog,false);
       PositionCalendarWindow(dialog);
       if(!preview && !Storage.Isolated) {
@@ -142,7 +158,8 @@ namespace EndfieldWidget {
       return new Rect(Placement.Clamp(desired.Left,work.Left+12,Math.Max(work.Left+12,work.Right-width-12)),Placement.Clamp(desired.Top,work.Top+12,Math.Max(work.Top+12,work.Bottom-height-12)),width,height);
     }
     void PositionCalendarWindow(Window dialog) {
-      var work=CalendarWorkArea();var desired=calendarLastBounds??new Rect(work.Left+(work.Width-960)/2,work.Top+(work.Height-790)/2,960,790);
+      const int width=1160,height=790;
+      var work=CalendarWorkArea();var desired=calendarLastBounds??new Rect(work.Left+(work.Width-width)/2,work.Top+(work.Height-height)/2,width,height);
       var fitted=FitCalendar(desired,work);dialog.WindowStartupLocation=WindowStartupLocation.Manual;
       dialog.MinWidth=Math.Min(420,fitted.Width);dialog.MinHeight=Math.Min(400,fitted.Height);
       dialog.Width=fitted.Width;dialog.Height=fitted.Height;dialog.Left=fitted.Left;dialog.Top=fitted.Top;
@@ -157,12 +174,22 @@ namespace EndfieldWidget {
       if(calendarDialog==null)return;
       bool compact=calendarDialog.ActualWidth<790;
       CalendarFind<ColumnDefinition>("CalendarRightColumn").Width=compact?new GridLength(0):new GridLength(1,GridUnitType.Star);
-      CalendarFind<ColumnDefinition>("CalendarGap").Width=new GridLength(compact?0:24);
-      var agenda=CalendarFind<Grid>("CalendarAgendaPane");Grid.SetColumn(agenda,compact?0:2);Grid.SetRow(agenda,compact?1:0);agenda.Margin=compact?new Thickness(0,22,0,0):new Thickness(0);
-      CalendarFind<ListBox>("CalendarAgenda").Height=Math.Max(260,Math.Min(760,calendarDialog.ActualHeight-314));
-      CalendarFind<ListBox>("CalendarEvents").Height=Math.Max(120,Math.Min(260,calendarDialog.ActualHeight-640));
-      CalendarFind<TextBlock>("CalendarLiveStatus").MaxWidth=calendarDialog.ActualWidth<600?105:180;
-      var host=CalendarFind<Grid>("CalendarSearchHost");host.Width=Math.Max(180,Math.Min(430,calendarDialog.ActualWidth-90-(CalendarFind<TextBlock>("CalendarLiveStatus").Text.Length>0?120:0)));
+      CalendarFind<ColumnDefinition>("CalendarGap").Width=new GridLength(compact?0:14);
+      var agenda=CalendarFind<Grid>("CalendarAgendaPane");Grid.SetColumn(agenda,compact?0:2);Grid.SetRow(agenda,compact?1:0);agenda.Margin=compact?new Thickness(0,14,0,0):new Thickness(0);
+      CalendarFind<ListBox>("CalendarAgenda").Height=Math.Max(260,Math.Min(760,calendarDialog.ActualHeight-238));
+      CalendarFind<ListBox>("CalendarEvents").Height=Math.Max(138,Math.Min(260,calendarDialog.ActualHeight-605));
+      bool stackedToolbar=calendarDialog.ActualWidth<1000;
+      var search=CalendarFind<Grid>("CalendarSearchHost");Grid.SetColumnSpan(search,stackedToolbar?2:1);
+      var filters=CalendarFind<WrapPanel>("CalendarFilters");Grid.SetRow(filters,stackedToolbar?1:0);Grid.SetColumn(filters,stackedToolbar?0:1);Grid.SetColumnSpan(filters,stackedToolbar?2:1);
+      filters.Margin=stackedToolbar?new Thickness(0,2,0,0):new Thickness(12,1,0,0);
+      bool narrowHeader=calendarDialog.ActualWidth<640;
+      CalendarFind<RowDefinition>("CalendarHeaderRow").Height=new GridLength(narrowHeader?80:99);
+      CalendarFind<Grid>("CalendarHeaderArt").Opacity=narrowHeader?0.37:1;
+      CalendarFind<Grid>("CalendarHeaderBrand").Margin=narrowHeader?new Thickness(16,0,48,0):new Thickness(24,0,54,0);
+      CalendarFind<TextBlock>("CalendarBrandKicker").FontSize=narrowHeader?9:12;
+      CalendarFind<TextBlock>("CalendarWordmark").FontSize=narrowHeader?29:39;
+      CalendarFind<TextBlock>("CalendarHeading").FontSize=narrowHeader?16:22;
+      CalendarFind<Border>("CalendarTitleDivider").Margin=new Thickness(narrowHeader?13:22,0,narrowHeader?13:22,0);
     }
     void MoveCalendarMonth(int offset) {
       if(offset<0 && calendarMonth.Year==1 && calendarMonth.Month==1 || offset>0 && calendarMonth.Year==9998 && calendarMonth.Month==12)return;
@@ -212,14 +239,16 @@ namespace EndfieldWidget {
       calendarRendering=true;
       try {
         EnsureCalendarSnapshot(dataChanged);var now=calendarNow();var today=Clock.Local(now).Date;var culture=L.Culture;
+        if(dataChanged && calendarDialog.IsLoaded)LoadCalendarHeroArtwork(CalendarFind<Image>("CalendarHeroImage"));
         string month=calendarMonth.ToString(L.Code=="uk"?"MMMM yyyy":culture.DateTimeFormat.YearMonthPattern,culture);CalendarFind<Button>("CalendarMonth").Content=char.ToUpper(month[0],culture)+month.Substring(1);
         CalendarFind<TextBlock>("CalendarSelected").Text=L.DateCaption(calendarDay,true);
         CalendarFind<Button>("CalendarPrevious").IsEnabled=calendarMonth>new DateTime(1,1,1);CalendarFind<Button>("CalendarNext").IsEnabled=calendarMonth<new DateTime(9998,12,1);
         CalendarFind<Button>("CalendarUpcoming").IsEnabled=calendarSnapshot.NearestDay(now).HasValue;
         int available=calendarRecords.Aggregate(0,(mask,e)=>mask|CalendarData.Mask(e.Kind));
-        foreach(string name in new[]{"CalendarAll","CalendarMaintenance","CalendarDebuts","CalendarBannerEnds","CalendarEventEnds"}) {
-          var filter=CalendarFind<ToggleButton>(name);int bit=int.Parse((string)filter.Tag,CultureInfo.InvariantCulture);
-          filter.Visibility=bit==15 || (available&bit)!=0?Visibility.Visible:Visibility.Collapsed;filter.IsChecked=bit==15?calendarFilterMask==15:(calendarFilterMask&bit)!=0;
+        foreach(ToggleButton filter in CalendarFind<WrapPanel>("CalendarFilters").Children) {
+          int bit=int.Parse((string)filter.Tag,CultureInfo.InvariantCulture);
+          filter.Visibility=bit==CalendarData.AllKinds || (available&bit)!=0?Visibility.Visible:Visibility.Collapsed;
+          filter.IsChecked=bit==CalendarData.AllKinds?calendarFilterMask==CalendarData.AllKinds:(calendarFilterMask&bit)!=0;
         }
         CalendarFind<TextBlock>("CalendarLiveStatus").Text=calendarCacheFailed?L.T("Data was not saved"):calendarFeed!=null && calendarFeed.Partial?(calendarFeed.SuccessCount>0?L.T("Some dates were updated"):L.T("Showing saved dates")):!preview && !calendarFeedLive?L.T("Saved dates"):"";
         string gridStamp=calendarSnapshot.Fingerprint+"|"+calendarMonth.Ticks+"|"+calendarDay.Ticks+"|"+today.Ticks;
@@ -232,6 +261,10 @@ namespace EndfieldWidget {
         string agendaStamp=CalendarData.Fingerprint(upcoming)+"|"+calendarZone+"|"+today.Ticks;
         if(agendaStamp!=calendarAgendaStamp){RenderCalendarAgenda(upcoming,now);calendarAgendaStamp=agendaStamp;CalendarAgendaBuilds++;}
         else foreach(var model in calendarAgendaModels)model.Refresh(now);
+        if(dataChanged) {
+          RequestRealizedCalendarArtwork(CalendarFind<ListBox>("CalendarEvents"));
+          RequestRealizedCalendarArtwork(CalendarFind<ListBox>("CalendarAgenda"));
+        }
         ScheduleCalendarPaint(now);UpdateCalendarSearchHint();
       }finally{calendarRendering=false;}
     }
@@ -239,7 +272,7 @@ namespace EndfieldWidget {
       var panel=CalendarFind<UniformGrid>("CalendarDays");
       if(calendarDayVisuals.Count==0)for(int i=0;i<42;i++) {
         var grid=new Grid{Margin=new Thickness(1,4,1,3)};grid.RowDefinitions.Add(new RowDefinition{Height=new GridLength(1,GridUnitType.Star)});grid.RowDefinitions.Add(new RowDefinition{Height=new GridLength(9)});
-        var number=new TextBlock{FontSize=13,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};var markers=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center};Grid.SetRow(markers,1);grid.Children.Add(number);grid.Children.Add(markers);
+        var number=new TextBlock{FontSize=15,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};var markers=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center};Grid.SetRow(markers,1);grid.Children.Add(number);grid.Children.Add(markers);
         var button=new Button{Content=grid,Style=(Style)calendarDialog.FindResource("CalendarDayStyle")};button.Click+=(s,e)=>SelectCalendarDay((DateTime)((Button)s).Tag);
         panel.Children.Add(button);calendarDayVisuals.Add(new CalendarDayVisual{Button=button,Number=number,Markers=markers});
       }
@@ -248,28 +281,32 @@ namespace EndfieldWidget {
         var date=first.AddDays(i);var visual=calendarDayVisuals[i];var entries=calendarSnapshot.OnDay(date);bool selected=date==calendarDay,isToday=date==today;
         visual.Button.Tag=date;visual.Number.Text=date.Day.ToString(CultureInfo.InvariantCulture);visual.Button.IsTabStop=selected;visual.Button.IsEnabled=date.Year<=9998;
         visual.Number.FontWeight=isToday || selected?FontWeights.SemiBold:FontWeights.Normal;
-        visual.Button.SetResourceReference(Control.BackgroundProperty,selected?"ThemeAccentBrush":entries.Count>0?"ThemeBadgeBrush":"ThemeCardBrush");
-        visual.Number.SetResourceReference(TextBlock.ForegroundProperty,selected?"ThemeInkBrush":date.Month!=calendarMonth.Month || date<today?"ThemeMutedBrush":"ThemeTextBrush");
-        visual.Button.SetResourceReference(Control.BorderBrushProperty,isToday?"ThemeAccentBrush":"ThemeCardBrush");
+        visual.Button.SetResourceReference(Control.BackgroundProperty,selected?"ThemeSelectionBrush":isToday?"CalendarTodayBrush":"CalendarDayBrush");
+        visual.Number.SetResourceReference(TextBlock.ForegroundProperty,date.Month!=calendarMonth.Month?"CalendarMutedBrush":"CalendarTextBrush");
+        visual.Button.SetResourceReference(Control.BorderBrushProperty,selected?"ThemeAccentBrush":isToday?"CalendarTodayBorderBrush":"CalendarGridBrush");
         visual.Button.BorderThickness=new Thickness(isToday?1.4:1);
-        string markers=string.Join(",",entries.Select(e=>e.Kind).Distinct().OrderBy(k=>k))+"|"+entries.Count+"|"+selected;
+        var colors=entries.Select(e=>CalendarPresentation.BrushFor(e.Kind)).Distinct().Take(3).ToList();
+        string markers=string.Join(",",colors)+"|"+entries.Count;
         if(visual.MarkerStamp!=markers) {
           visual.Markers.Children.Clear();
-          foreach(var kind in entries.Select(e=>e.Kind).Distinct().OrderBy(k=>k).Take(3)) {
-            var path=new Path{Data=Geometry.Parse(CalendarPresentation.Icon(kind)),Width=5,Height=5,Stretch=Stretch.Uniform,StrokeThickness=1.5,Margin=new Thickness(1.5,0,1.5,0)};path.SetResourceReference(Shape.StrokeProperty,selected?"ThemeInkBrush":"ThemeAccentBrush");visual.Markers.Children.Add(path);
-          }
-          if(entries.Count>3){var count=new TextBlock{Text="+"+(entries.Count-3),FontSize=7,Margin=new Thickness(2,-2,0,0)};count.SetResourceReference(TextBlock.ForegroundProperty,selected?"ThemeInkBrush":"ThemeSecondaryTextBrush");visual.Markers.Children.Add(count);}visual.MarkerStamp=markers;
+          foreach(var color in colors)visual.Markers.Children.Add(new Ellipse{Width=5,Height=5,Fill=color,Margin=new Thickness(1.5,0,1.5,0)});
+          if(entries.Count>colors.Count){var count=new TextBlock{Text="+"+(entries.Count-colors.Count),FontSize=7,Margin=new Thickness(2,-2,0,0)};count.SetResourceReference(TextBlock.ForegroundProperty,"CalendarSecondaryBrush");visual.Markers.Children.Add(count);}visual.MarkerStamp=markers;
         }
         string accessible=date.ToString("dddd, d MMMM yyyy",L.Culture)+(isToday?L.T(" · today"):"")+(selected?L.T(" · selected"):"")+(entries.Count>0?" · "+entries.Count+" "+Clock.Unit(entries.Count,L.T("event"),L.T("event.count.few"),L.T("event.count.many")):"");
-        AutomationProperties.SetName(visual.Button,accessible);visual.Button.ToolTip=entries.Count>0?accessible+"\n"+string.Join("\n",entries.Select(e=>CalendarData.Label(e.Kind)+" · "+e.Name).Take(8)):accessible;
+        AutomationProperties.SetName(visual.Button,accessible);visual.Button.ToolTip=entries.Count>0?accessible+"\n"+string.Join("\n",entries.Select(e=>CalendarData.Label(e.Kind)+" · "+e.Name+" · "+CalendarPresentation.Time(e)).Take(8)):accessible;
       }
+    }
+    static void RequestRealizedCalendarArtwork(DependencyObject root) {
+      var artwork=root as CalendarArtworkImage;
+      if(artwork!=null){artwork.RequestArtwork();return;}
+      for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++)RequestRealizedCalendarArtwork(VisualTreeHelper.GetChild(root,i));
     }
     ScrollViewer CalendarDayScroller(){return FindCalendarVisual<ScrollViewer>(CalendarFind<ListBox>("CalendarEvents"));}
     void RenderCalendarCards(IList<CalendarEntry> entries,DateTimeOffset now) {
       var list=CalendarFind<ListBox>("CalendarEvents");var scroll=CalendarDayScroller();double offset=scroll==null?0:scroll.VerticalOffset;
       calendarDayModels=entries.Select(entry=>new CalendarCardModel(entry,now,calendarSourceCommand,CalendarDetailFor)).ToList();list.ItemsSource=calendarDayModels;
       var empty=CalendarFind<TextBlock>("CalendarDayEmpty");empty.Visibility=entries.Count==0?Visibility.Visible:Visibility.Collapsed;
-      empty.Text=CalendarData.Normalize(calendarQuery).Length>0?L.T("No events match this search"):calendarFilterMask!=15?L.T("No events of the selected types on this day"):calendarFeed!=null && calendarFeed.Partial?L.T("Dates are unavailable. We will retry automatically."):L.T("No events announced for this day");
+      empty.Text=CalendarData.Normalize(calendarQuery).Length>0?L.T("No events match this search"):calendarFilterMask!=CalendarData.AllKinds?L.T("No events of the selected types on this day"):calendarFeed!=null && calendarFeed.Partial?L.T("Dates are unavailable. We will retry automatically."):L.T("No events announced for this day");
       if(scroll!=null)scroll.ScrollToVerticalOffset(offset);
     }
     void RenderCalendarAgenda(IList<CalendarEntry> entries,DateTimeOffset now) {
@@ -278,7 +315,7 @@ namespace EndfieldWidget {
       if(calendarSelectedId!=null)list.SelectedItem=calendarAgendaModels.FirstOrDefault(m=>m.Id==calendarSelectedId);
       CalendarFind<TextBlock>("CalendarAgendaCount").Text=entries.Count==0?"":entries.Count+" "+Clock.Unit(entries.Count,L.T("event"),L.T("event.count.few"),L.T("event.count.many"));
       var empty=CalendarFind<TextBlock>("CalendarAgendaEmpty");empty.Visibility=entries.Count==0?Visibility.Visible:Visibility.Collapsed;
-      empty.Text=CalendarData.Normalize(calendarQuery).Length>0?L.T("No events match this search"):calendarFilterMask!=15?L.T("No upcoming events of the selected types"):calendarFeed!=null && calendarFeed.Partial?L.T("Data is unavailable. Saved dates remain in the calendar."):L.T("No upcoming events announced");
+      empty.Text=CalendarData.Normalize(calendarQuery).Length>0?L.T("No events match this search"):calendarFilterMask!=CalendarData.AllKinds?L.T("No upcoming events of the selected types"):calendarFeed!=null && calendarFeed.Partial?L.T("Data is unavailable. Saved dates remain in the calendar."):L.T("No upcoming events announced");
       if(scroll!=null)scroll.ScrollToVerticalOffset(offset);
     }
     static T FindCalendarVisual<T>(DependencyObject root) where T:DependencyObject {
@@ -293,17 +330,25 @@ namespace EndfieldWidget {
       try{if(zone.IsInvalidTime(midnight))midnight=midnight.AddHours(1);calendarNextPaint=new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(midnight,zone),TimeSpan.Zero);}catch{calendarNextPaint=now.AddHours(1);}
       foreach(var entry in calendarSnapshot.Entries) {
         if(entry.At>now){var delay=RefreshTiming.CountdownDelay(entry.At-now);if(now+delay<calendarNextPaint)calendarNextPaint=now+delay;if(entry.At<calendarNextPaint)calendarNextPaint=entry.At;}
-        if(entry.End.HasValue && entry.End>now && entry.End<calendarNextPaint)calendarNextPaint=entry.End.Value;
+        var end=entry.RangeEnd;if(end.HasValue && end>now && end<calendarNextPaint)calendarNextPaint=end.Value;
       }
     }
     void TickCalendar(DateTimeOffset now){if(calendarDialog!=null && calendarDialog.IsVisible && now>=calendarNextPaint)RenderCalendar(false);}
     void InitializeCalendarTemplates() {
       if(calendarCardTemplate!=null)return;
-      const string start=@"<DataTemplate xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:local=""clr-namespace:EndfieldWidget;assembly=EndfieldWidget""><StackPanel>
-       <StackPanel Orientation=""Horizontal""><Path Data=""{Binding Icon}"" Width=""10"" Height=""10"" Stretch=""Uniform"" Stroke=""{DynamicResource ThemeAccentBrush}"" StrokeThickness=""1.2"" Margin=""0,0,7,0"" VerticalAlignment=""Center""/><TextBlock Text=""{Binding Category}"" FontSize=""10"" FontWeight=""SemiBold"" Foreground=""{DynamicResource ThemeSoftAccentBrush}"" TextWrapping=""Wrap""/></StackPanel>
-       <TextBlock Text=""{Binding Name}"" FontSize=""16"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Foreground=""{DynamicResource ThemeTextBrush}"" Margin=""0,8,0,0""/>
-       <TextBlock Text=""{Binding TimeText}"" FontSize=""14"" FontFamily=""Bahnschrift"" Foreground=""{DynamicResource ThemeSecondaryTextBrush}"" Margin=""0,8,0,0"" TextWrapping=""Wrap""/>
-       <TextBlock Text=""{Binding Status}"" FontSize=""11"" Foreground=""{DynamicResource ThemeMutedBrush}"" Margin=""0,5,0,0"" TextWrapping=""Wrap""/>";
+      const string start=@"<DataTemplate xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:local=""clr-namespace:EndfieldWidget;assembly=EndfieldWidget"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""><StackPanel>
+       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width=""Auto""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions>
+        <Border Width=""136"" Height=""76"" Margin=""0,0,12,0"" VerticalAlignment=""Top"" ToolTip=""{Binding ArtworkCaption}"" AutomationProperties.Name=""{Binding ArtworkCaption}""><Border.Clip><RectangleGeometry Rect=""0,0,136,76"" RadiusX=""6"" RadiusY=""6""/></Border.Clip>
+         <Border.Style><Style TargetType=""Border""><Setter Property=""Visibility"" Value=""Visible""/><Style.Triggers><DataTrigger Binding=""{Binding Artwork}"" Value=""{x:Null}""><Setter Property=""Visibility"" Value=""Collapsed""/></DataTrigger></Style.Triggers></Style></Border.Style>
+         <local:CalendarArtworkImage Source=""{Binding Artwork}"" Stretch=""UniformToFill"" RenderOptions.BitmapScalingMode=""HighQuality"" IsHitTestVisible=""False""/>
+        </Border>
+        <StackPanel Grid.Column=""1"">
+         <DockPanel><Path Data=""{Binding Icon}"" Width=""12"" Height=""12"" Stretch=""Uniform"" Stroke=""{Binding CategoryBrush}"" StrokeThickness=""1.3"" Margin=""0,0,6,0"" VerticalAlignment=""Center""/><TextBlock Text=""{Binding Category}"" FontSize=""11"" FontWeight=""SemiBold"" Foreground=""{Binding CategoryBrush}"" TextWrapping=""Wrap""/></DockPanel>
+         <TextBlock Text=""{Binding Name}"" FontSize=""17"" FontWeight=""SemiBold"" TextWrapping=""Wrap"" Foreground=""{DynamicResource CalendarTextBrush}"" Margin=""0,4,0,0""/>
+         <DockPanel Margin=""0,7,0,0""><Path Data=""M7,1 A6,6 0 1 1 7,13 A6,6 0 1 1 7,1 M7,3 L7,7 L9.5,8.5"" Width=""12"" Height=""12"" Stretch=""Uniform"" Stroke=""{DynamicResource CalendarSecondaryBrush}"" StrokeThickness=""1.1"" VerticalAlignment=""Center"" Margin=""0,0,6,0""/><TextBlock Text=""{Binding TimeText}"" FontSize=""12"" Foreground=""{DynamicResource CalendarSecondaryBrush}"" TextWrapping=""Wrap""/></DockPanel>
+         <Border CornerRadius=""6"" Background=""{DynamicResource CalendarStatusBrush}"" HorizontalAlignment=""Left"" Padding=""6,3"" Margin=""0,4,0,0""><TextBlock Text=""{Binding Status}"" FontSize=""10"" Foreground=""{DynamicResource CalendarTextBrush}"" TextWrapping=""Wrap""/></Border>
+        </StackPanel>
+       </Grid>";
       const string source=@"<StackPanel Orientation=""Horizontal""><TextBlock Text=""{DynamicResource Locale.028cd1c8834585ddc0803f30}"" FontSize=""10"" FontWeight=""SemiBold"" Foreground=""{DynamicResource ThemeAccentBrush}""/><Path Data=""M1,8 L8,1 M2,1 L8,1 L8,7"" Width=""8"" Height=""8"" Stretch=""Uniform"" Stroke=""{DynamicResource ThemeAccentBrush}"" StrokeThickness=""1.2"" VerticalAlignment=""Center"" Margin=""7,0,0,0""/></StackPanel>";
       const string details=@"<local:CalendarReveal IsOpen=""{Binding Details.IsExpanded}""><Border Margin=""0,9,0,0"" BorderThickness=""0,1,0,0"" BorderBrush=""{DynamicResource ThemeBorderBrush}"" Padding=""0,12,7,0""><StackPanel>
        <TextBlock Text=""{Binding PeriodLabel}"" FontSize=""9"" FontWeight=""SemiBold"" Foreground=""{DynamicResource ThemeSoftAccentBrush}""/><TextBlock Text=""{Binding PeriodText}"" Foreground=""{DynamicResource ThemeTextBrush}"" TextWrapping=""Wrap"" FontSize=""11"" Margin=""0,5,0,10""/>
@@ -311,7 +356,7 @@ namespace EndfieldWidget {
        <TextBlock Text=""{DynamicResource Locale.f6e376bf5db74e983dc86da7}"" Visibility=""{Binding Details.ParticipationVisibility}"" FontSize=""9"" FontWeight=""SemiBold"" Foreground=""{DynamicResource ThemeSoftAccentBrush}"" Margin=""0,12,0,5""/><TextBlock Text=""{Binding Details.Participation}"" Visibility=""{Binding Details.ParticipationVisibility}"" Foreground=""{DynamicResource ThemeTextBrush}"" TextWrapping=""Wrap"" FontSize=""12"" LineHeight=""18""/>
        <TextBlock Text=""{Binding Details.Notice}"" Visibility=""{Binding Details.NoticeVisibility}"" Foreground=""{DynamicResource ThemeMutedBrush}"" FontSize=""11"" TextWrapping=""Wrap"" Margin=""0,5,0,0""/><Button Content=""{DynamicResource Locale.d8b8392e2c542950ca648671}"" Visibility=""{Binding Details.RetryVisibility}"" Command=""{Binding Details.Retry}"" HorizontalAlignment=""Left"" Padding=""8,6"" Margin=""0,8,0,0""/>
       </StackPanel></Border></local:CalendarReveal>";
-      string actions=@"<Grid Margin=""0,7,0,0""><Grid.ColumnDefinitions><ColumnDefinition Width=""Auto""/><ColumnDefinition Width=""Auto""/><ColumnDefinition Width=""*""/></Grid.ColumnDefinitions><ToggleButton Style=""{DynamicResource CalendarDetailToggle}"" Content=""{Binding Details.Label}"" IsChecked=""{Binding Details.IsExpanded,Mode=TwoWay}"" Margin=""-5,0,10,0"" AutomationProperties.Name=""{DynamicResource Locale.bbc59c7fb3a3860162e30144}""/><Button Grid.Column=""1"" Command=""{Binding OpenSource}"" CommandParameter=""{Binding SourceTarget}"" AutomationProperties.Name=""{Binding AccessibleName}"" Background=""Transparent"" HorizontalAlignment=""Left"" Padding=""0,7,6,2"">"+source+"</Button></Grid>";
+      string actions=@"<WrapPanel HorizontalAlignment=""Right"" Margin=""0,3,0,0""><ToggleButton Style=""{DynamicResource CalendarDetailToggle}"" Content=""{Binding Details.Label}"" IsChecked=""{Binding Details.IsExpanded,Mode=TwoWay}"" Margin=""0,0,8,0"" AutomationProperties.Name=""{DynamicResource Locale.bbc59c7fb3a3860162e30144}""/><Button Command=""{Binding OpenSource}"" CommandParameter=""{Binding SourceTarget}"" AutomationProperties.Name=""{Binding AccessibleName}"" Background=""Transparent"" HorizontalAlignment=""Left"" Padding=""0,6,6,6"">"+source+"</Button></WrapPanel>";
       calendarCardTemplate=calendarAgendaTemplate=(DataTemplate)XamlReader.Parse(start+actions+details+"</StackPanel></DataTemplate>");
     }
     Window CreateCalendarWindow() {

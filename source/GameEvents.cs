@@ -6,23 +6,40 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EndfieldWidget {
+  public enum GameEventCategory {Event,Rerun,Weapon,SignIn,Supply,Trial,Area,Gameplay,Season,Exchange,ContentUpdate,Debut}
   public sealed class GameEvent {
     public string Name {get;set;}
     public string Source {get;set;}
     public long Published {get;set;}
     public string Identity {get;set;}
     public bool FromOverview {get;set;}
+    public GameEventCategory Category {get;set;}
     public long EuropeStartUnix {get;set;}
     public long AsiaStartUnix {get;set;}
     public long EuropeEndUnix {get;set;}
     public long AsiaEndUnix {get;set;}
+    public bool EuropeEndAtMaintenance {get;set;}
+    public bool AsiaEndAtMaintenance {get;set;}
+    internal GameEvent WithMaintenanceEnd(IList<Schedule> schedules) {
+      if(!EuropeEndAtMaintenance && !AsiaEndAtMaintenance)return this;
+      var copy=(GameEvent)MemberwiseClone();
+      if(EuropeEndAtMaintenance && EuropeEndUnix==0)copy.EuropeEndUnix=MaintenanceEnd(schedules,EuropeStartUnix);
+      if(AsiaEndAtMaintenance && AsiaEndUnix==0)copy.AsiaEndUnix=MaintenanceEnd(schedules,AsiaStartUnix);
+      return copy;
+    }
+    long MaintenanceEnd(IList<Schedule> schedules,long start) {
+      if(start<=0)return 0;
+      long after=Math.Max(start,Published);
+      return schedules.Where(s=>CalendarData.Official(s.Source) && s.End>s.Start).Select(s=>s.Start.ToUnixTimeSeconds())
+        .Where(at=>at>after && at-start<=86400L*180).DefaultIfEmpty(0).Min();
+    }
     public DateTimeOffset? End(bool asia) {
       if(!CalendarData.Official(Source) || string.IsNullOrWhiteSpace(Name) || Name.Length>160)return null;
       long value=asia?AsiaEndUnix:EuropeEndUnix;if(value<=0)return null;
       try{return DateTimeOffset.FromUnixTimeSeconds(value);}catch(ArgumentOutOfRangeException){return null;}
     }
   }
-  static class GameEventDates {
+  static partial class GameEventDates {
     const RegexOptions Options=RegexOptions.IgnoreCase|RegexOptions.Multiline;
     const string DateToken=@"[A-Za-z]+\.?\s+\d{1,2}(?:,?\s+\d{4})?\s*(?:at\s*)?\d{1,2}:\d{2}";
     const string RegionEurope=@"(?:Americas\s*/\s*Europe|Europe\s*/\s*Americas|Europe)";
@@ -130,7 +147,7 @@ namespace EndfieldWidget {
     static bool ContentUpdateOnly(string text){return TimeBlock(text)==null && Regex.IsMatch(text,@"^[ \t]*(?:[·•■]\s*|▼\s*//\s*)?Event Content Update Time\s*:",Options);}
     public static List<GameEvent> Latest(IEnumerable<GameEvent> entries) {
       var result=new List<GameEvent>();
-      foreach(var group in entries.Where(e=>e!=null && CalendarData.Official(e.Source) && !string.IsNullOrWhiteSpace(e.Name)).GroupBy(e=>CalendarData.Normalize(e.Name))) {
+      foreach(var group in entries.Where(e=>e!=null && CalendarData.Official(e.Source) && !string.IsNullOrWhiteSpace(e.Name)).GroupBy(e=>e.Category==GameEventCategory.Event?CalendarData.Normalize(e.Name):e.Category+":"+CalendarData.Normalize(e.Name))) {
         var occurrences=new List<List<GameEvent>>();
         foreach(var entry in group.OrderBy(e=>e.Published).ThenBy(e=>e.Source,StringComparer.Ordinal)) {
           var occurrence=occurrences.FirstOrDefault(items=>items.Any(old=>SameOccurrence(old,entry)));
@@ -146,6 +163,7 @@ namespace EndfieldWidget {
       return result;
     }
     static bool SameOccurrence(GameEvent first,GameEvent second) {
+      if(first.Category==GameEventCategory.ContentUpdate)return first.EuropeStartUnix==second.EuropeStartUnix && first.AsiaStartUnix==second.AsiaStartUnix;
       if(first.Source==second.Source)return true;
       long start=first.EuropeStartUnix>0?first.EuropeStartUnix:first.AsiaStartUnix,other=second.EuropeStartUnix>0?second.EuropeStartUnix:second.AsiaStartUnix;
       if(start>0 && other>0)return Math.Abs((double)start-other)<=86400*2;

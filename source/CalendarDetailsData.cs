@@ -27,7 +27,7 @@ namespace EndfieldWidget {
         var headings=Regex.Matches(text,@"(?m)^[ \t]*\d+[.)][ \t]*(?<title>[^\r\n]*\[[^\]\r\n]+\][^\r\n]*)\r?$");
         for(int i=0;i<headings.Count;i++) {
           int from=headings[i].Index+headings[i].Length,to=i+1<headings.Count?headings[i+1].Index:text.Length;string header=headings[i].Groups["title"].Value,body=text.Substring(from,to-from);
-          bool matching=GameEventDates.Eligible(header) && CalendarData.Normalize(GameEventDates.Name(header))==CalendarData.Normalize(entry.Name);
+          bool matching=GameEventDates.CalendarEligible(header) && CalendarData.Normalize(GameEventDates.Name(header))==CalendarData.Normalize(entry.Name);
           if(entry.Kind==CalendarKind.Debut || entry.Kind==CalendarKind.BannerEnd){var featured=BannerClient.FeaturedName(body);matching=BannerClient.IsDebutTitle(header) && featured!=null && CalendarData.Normalize(featured)==CalendarData.Normalize(entry.Name);}
           if(!matching)continue;
           var end=Regex.Match(body,@"(?m)^[ \t]*(?:■[ \t]*(?:New |Event &|System |Story |Other |Optim)|▼\s*//\s*(?:Optim|Bug))",RegexOptions.IgnoreCase);

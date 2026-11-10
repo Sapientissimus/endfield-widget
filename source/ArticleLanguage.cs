@@ -18,7 +18,7 @@ namespace EndfieldWidget {
       foreach(var names in new[]{format.MonthNames,format.MonthGenitiveNames,format.AbbreviatedMonthNames,format.AbbreviatedMonthGenitiveNames})for(int i=0;i<12;i++)if(!string.IsNullOrEmpty(names[i]))result[names[i]]=i+1;
       return result;
     }
-    static string Quotes(string text){return (text??"").Replace('«','[').Replace('»',']').Replace('「','[').Replace('」',']').Replace('“','[').Replace('”',']');}
+    static string Quotes(string text){return LocalizedArticles.Quotes(text);}
     public static string Title(string text) {
       string value=Quotes(text);var name=Regex.Match(value,@"\[([^\[\]\r\n]+)\]");if(!name.Success)return value;
       string bracket="["+name.Groups[1].Value+"]";

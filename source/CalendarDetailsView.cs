@@ -65,6 +65,6 @@ namespace EndfieldWidget {
         try{await Task.Run(()=>CalendarDetailsStore.Save(result));}catch{}
       }catch{if(calendarDialog!=null && epoch==calendarDetailEpoch)state.Failure();}
     }
-    void ReleaseCalendarDetails(){calendarDetailEpoch++;calendarDetailStates.Clear();}
+    void ReleaseCalendarDetails(){calendarDetailEpoch++;calendarDetailStates.Clear();ReleaseCalendarArtwork();}
   }
 }

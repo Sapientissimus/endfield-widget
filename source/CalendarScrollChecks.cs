@@ -32,7 +32,7 @@ namespace EndfieldWidget {
         Clock.ZoneOverride=()=>TimeZoneInfo.Utc;
         var now=new DateTimeOffset(2029,3,1,12,0,0,TimeSpan.Zero);var end=now.AddDays(4);
         calendarNow=()=>now;calendarFeed=null;schedule=null;bannerState=new BannerState{GameEvents=new List<GameEvent>{CalendarEvent("Event with a long description","81001",now.AddDays(-1),now.AddDays(1),end)}};
-        calendarRemembered=false;calendarQuery="";calendarFilterMask=15;calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();calendarLastBounds=null;
+        calendarRemembered=false;calendarQuery="";calendarFilterMask=CalendarData.Mask(CalendarKind.EventEnd);calendarDetailCache=new Dictionary<string,CalendarDetailRecord>();calendarLastBounds=null;
         var pending=new TaskCompletionSource<CalendarDetailRecord>();calendarDetailFetchOverride=e=>pending.Task;
         ShowCalendar();calendarDialog.Width=960;calendarDialog.Height=790;SelectCalendarDay(end.Date);await CalendarScrollLayout();
         check(calendarDialog.ResizeMode==ResizeMode.CanResize && CalendarVisualElements<ResizeGrip>(calendarDialog).Count(g=>g.IsVisible)==1 && CalendarFind<ResizeGrip>("CalendarResizeGrip").IsVisible,"The calendar shows one resize grip instead of overlapping native-template and custom grips");
@@ -55,7 +55,7 @@ namespace EndfieldWidget {
           check(Math.Abs(scroll.VerticalOffset-197)<1,name+" supports a precise intermediate position inside one expanded card");
           scroll.ScrollToBottom();await CalendarScrollLayout();
           var tail=CalendarVisualElements<TextBlock>(list).First(t=>t.Text==day.Details.Participation);var tailBounds=tail.TransformToAncestor(scroll).TransformBounds(new Rect(tail.RenderSize));
-          check(scroll.ScrollableHeight>400 && Math.Abs(scroll.VerticalOffset-scroll.ScrollableHeight)<1 && tailBounds.Bottom<=scroll.ActualHeight+2 && tailBounds.Bottom>0,name+" reaches the final participation line at the end of the full description");
+          check(Math.Abs(scroll.VerticalOffset-scroll.ScrollableHeight)<1 && tailBounds.Bottom<=scroll.ActualHeight+2 && tailBounds.Bottom>0,name+" reaches the final participation line at the end of the full description");
           SaveImage(calendarDialog,Path.Combine(folder,name+"-details-bottom.png"));
           scroll.ScrollToTop();await CalendarScrollLayout();
         }

@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 namespace EndfieldWidget {
-  enum CalendarKind {Unknown,Maintenance,Debut,BannerEnd,EventEnd}
+  enum CalendarKind {Unknown,Maintenance,Debut,BannerEnd,EventEnd,EventStart,Milestone,RerunStart,RerunEnd,WeaponStart,WeaponEnd}
   sealed class CalendarEntry {
     public string Id,Title,Name,Source;
     public CalendarKind Kind;
@@ -16,14 +16,28 @@ namespace EndfieldWidget {
     public DateTimeOffset? End;
     public DateTimeOffset? PeriodStart,PeriodEnd;
     public long Published;
+    public DateTimeOffset? RangeEnd {get{return End??(CalendarData.IsEnd(Kind)?null:PeriodEnd);}}
   }
   static class CalendarData {
-    public const int AllKinds=15;
+    public const int AllKinds=(1<<(int)CalendarKind.WeaponEnd)-1;
     public static bool Official(string source){return source!=null && Publications.Official(source);}
     public static string Normalize(string text){return Regex.Replace((text??"").Normalize(NormalizationForm.FormKC).Replace('\u2019','\''),@"\s+"," ").Trim().ToLowerInvariant();}
     public static string Label(CalendarKind kind) {
-      switch(kind){case CalendarKind.Maintenance:return L.T("Maintenance");case CalendarKind.Debut:return L.T("Debut");case CalendarKind.BannerEnd:return L.T("Banner ends");case CalendarKind.EventEnd:return L.T("Event ends");default:return L.T("Event");}
+      switch(kind) {
+        case CalendarKind.Maintenance:return L.T("Maintenance");
+        case CalendarKind.Debut:return L.T("Debut");
+        case CalendarKind.BannerEnd:return L.T("Banner ends");
+        case CalendarKind.EventEnd:return L.T("Event ends");
+        case CalendarKind.EventStart:return L.T("Event starts");
+        case CalendarKind.Milestone:return L.T("Milestone");
+        case CalendarKind.RerunStart:return L.T("Rerun")+" · "+L.T("START");
+        case CalendarKind.RerunEnd:return L.T("Rerun")+" · "+L.T("END");
+        case CalendarKind.WeaponStart:return L.T("Weapon banner")+" · "+L.T("START");
+        case CalendarKind.WeaponEnd:return L.T("Weapon banner")+" · "+L.T("END");
+        default:return L.T("Event");
+      }
     }
+    public static bool IsEnd(CalendarKind kind){return kind==CalendarKind.BannerEnd || kind==CalendarKind.EventEnd || kind==CalendarKind.RerunEnd || kind==CalendarKind.WeaponEnd;}
     public static int Mask(CalendarKind kind){return kind==CalendarKind.Unknown?AllKinds:1<<((int)kind-1);}
     static DateTimeOffset? Unix(long value){try{return value>0?(DateTimeOffset?)DateTimeOffset.FromUnixTimeSeconds(value):null;}catch(ArgumentOutOfRangeException){return null;}}
     static CalendarEntry Period(CalendarEntry entry,DateTimeOffset? start,DateTimeOffset? end){if(entry!=null && start.HasValue && end.HasValue && end>start){entry.PeriodStart=start;entry.PeriodEnd=end;}return entry;}
@@ -39,27 +53,46 @@ namespace EndfieldWidget {
       Action<CalendarEntry> add=entry=>{if(entry!=null)result.Add(entry);};
       var schedules=new List<Schedule>();if(schedule!=null)schedules.Add(schedule);if(feed!=null && feed.Schedules!=null)schedules.AddRange(feed.Schedules.Where(s=>s!=null));
       foreach(var item in schedules)add(Period(Entry(CalendarKind.Maintenance,"maintenance:"+Normalize(item.Version),item.Version,item.Source,item.Start,item.End,item.PublishedUnix>0?item.PublishedUnix:item.Checked.ToUnixTimeSeconds()),item.Start,item.End));
+      // Once available, the independent feed supersedes the saved banner snapshot.
+      var records=feed!=null && feed.Schema==CalendarFeedState.CurrentSchema?feed.Events:banners==null?null:banners.GameEvents;
+      var events=records==null?new List<GameEvent>():GameEventDates.Latest(records).Select(e=>e.WithMaintenanceEnd(schedules)).ToList();
       if(banners!=null && banners.Debuts!=null)foreach(var debut in banners.Debuts.Where(d=>d!=null && !string.IsNullOrWhiteSpace(d.Name)).GroupBy(d=>Normalize(d.Name)).Select(g=>g.OrderBy(d=>asia?d.AsiaStart:d.EuropeStart).First())) {
-        var start=asia?debut.AsiaStart:debut.EuropeStart;
-        var end=BannerClient.End(debut,asia);add(Period(Entry(CalendarKind.Debut,"debut:"+Normalize(debut.Name),debut.Name,debut.Source,start,null,0),start,end));
-        if(end.HasValue)add(Period(Entry(CalendarKind.BannerEnd,"banner-end:"+Normalize(debut.Name),debut.Name,debut.Source,end.Value,null,0),start,end));
+        var start=asia?debut.AsiaStart:debut.EuropeStart;var name=Normalize(debut.Name);
+        var end=BannerClient.End(debut,asia);string endSource=debut.Source;long published=0;
+        if(!end.HasValue && Official(debut.Source) && start!=DateTimeOffset.MinValue) {
+          var notice=events.Where(e=>e.Category==GameEventCategory.Debut && Normalize(e.Name)==name && Unix(asia?e.AsiaStartUnix:e.EuropeStartUnix)==start && e.End(asia)>start)
+            .OrderByDescending(e=>e.Published).FirstOrDefault();
+          if(notice!=null){end=notice.End(asia);endSource=notice.Source;published=notice.Published;}
+        }
+        add(Period(Entry(CalendarKind.Debut,"debut:"+name,debut.Name,debut.Source,start,null,0),start,end));
+        if(end.HasValue)add(Period(Entry(CalendarKind.BannerEnd,"banner-end:"+name,debut.Name,endSource,end.Value,null,published),start,end));
       }
-      // The independent feed is authoritative once available: a withdrawal must
-      // not be resurrected from an older banner snapshot.
-      var events=feed!=null && feed.Schema==CalendarFeedState.CurrentSchema?feed.Events:banners==null?null:banners.GameEvents;
-      if(events!=null)foreach(var item in GameEventDates.Latest(events)) {
-        var end=item.End(asia);if(end.HasValue)add(Period(Entry(CalendarKind.EventEnd,"game:"+item.Identity,item.Name,item.Source,end.Value,null,item.Published),Unix(asia?item.AsiaStartUnix:item.EuropeStartUnix),end));
+      foreach(var item in events.Where(e=>e.Category!=GameEventCategory.Debut)) {
+        var start=Unix(asia?item.AsiaStartUnix:item.EuropeStartUnix);var end=item.End(asia);
+        var startKind=CalendarKind.EventStart;var endKind=CalendarKind.EventEnd;
+        switch(item.Category) {
+          case GameEventCategory.Rerun:startKind=CalendarKind.RerunStart;endKind=CalendarKind.RerunEnd;break;
+          case GameEventCategory.Weapon:startKind=CalendarKind.WeaponStart;endKind=CalendarKind.WeaponEnd;break;
+          case GameEventCategory.Area:
+          case GameEventCategory.ContentUpdate:if(!end.HasValue)startKind=CalendarKind.Milestone;break;
+        }
+        string id="game:"+item.Identity;
+        if(start.HasValue)add(Period(Entry(startKind,id+":start",item.Name,item.Source,start.Value,null,item.Published),start,end));
+        if(end.HasValue)add(Period(Entry(endKind,id,item.Name,item.Source,end.Value,null,item.Published),start,end));
       }
       return Ordered(result.GroupBy(e=>e.Id,StringComparer.Ordinal).Select(g=>g.OrderByDescending(e=>e.Published).First())).ToList();
     }
     public static IOrderedEnumerable<CalendarEntry> Ordered(IEnumerable<CalendarEntry> entries){return entries.OrderBy(e=>e.At).ThenBy(e=>e.Kind).ThenBy(e=>e.Name??e.Title,StringComparer.OrdinalIgnoreCase).ThenBy(e=>e.Id,StringComparer.Ordinal);}
-    public static bool Affects(CalendarEntry entry,DateTime day) {
-      if(entry==null || entry.At==DateTimeOffset.MinValue)return false;
-      var start=Clock.Local(entry.At).Date;
-      if(!entry.End.HasValue)return start==day.Date;
-      if(entry.End<=entry.At)return false;
-      return start<=day.Date && Clock.Local(entry.End.Value.AddTicks(-1)).Date>=day.Date;
+    public static IEnumerable<DateTime> GridDays(CalendarEntry entry) {
+      if(entry==null || entry.At==DateTimeOffset.MinValue || entry.End.HasValue && entry.End<=entry.At)yield break;
+      var first=Clock.Local(entry.At).Date;
+      yield return first;
+      if(entry.End.HasValue) {
+        var last=Clock.Local(entry.End.Value).Date;
+        if(last!=first)yield return last;
+      }
     }
+    public static bool Affects(CalendarEntry entry,DateTime day){return GridDays(entry).Contains(day.Date);}
     public static IEnumerable<CalendarEntry> OnDay(IEnumerable<CalendarEntry> entries,DateTime day){return entries.Where(e=>Affects(e,day));}
     public static DateTime? NearestDay(IEnumerable<CalendarEntry> entries,DateTimeOffset now) {
       var next=Ordered(entries.Where(e=>e!=null && (e.At>=now || e.End.HasValue && e.End.Value>now))).OrderBy(e=>e.At<now?now:e.At).FirstOrDefault();
@@ -81,10 +114,9 @@ namespace EndfieldWidget {
       entries=CalendarData.Ordered(source.Where(e=>(CalendarData.Mask(e.Kind)&mask)!=0 && (search.Length==0 || CalendarData.Normalize((e.Name??e.Title)+" "+CalendarData.Label(e.Kind)).Contains(search)))).ToList().AsReadOnly();
       Fingerprint=CalendarData.Fingerprint(entries)+"|"+CalendarData.ZoneKey();
       var building=new Dictionary<DateTime,List<CalendarEntry>>();
-      foreach(var entry in entries) {
-        DateTime first=Clock.Local(entry.At).Date,last=entry.End.HasValue && entry.End>entry.At?Clock.Local(entry.End.Value.AddTicks(-1)).Date:first;
-        if(last<first || (last-first).TotalDays>31)continue;
-        for(DateTime day=first;day<=last;day=day.AddDays(1)){List<CalendarEntry> values;if(!building.TryGetValue(day,out values)){values=new List<CalendarEntry>();building[day]=values;}values.Add(entry);if(day==DateTime.MaxValue.Date)break;}
+      foreach(var entry in entries)foreach(var day in CalendarData.GridDays(entry)) {
+        List<CalendarEntry> values;if(!building.TryGetValue(day,out values)){values=new List<CalendarEntry>();building[day]=values;}
+        values.Add(entry);
       }
       foreach(var pair in building)days[pair.Key]=pair.Value.AsReadOnly();
     }

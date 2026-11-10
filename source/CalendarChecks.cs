@@ -30,6 +30,7 @@ namespace EndfieldWidget {
       }));
     }
     async Task CheckCalendarUpgrade(Action<bool,string> check,string folder) {
+      await CheckExpandedPublication(check,folder);
       CheckCalendarDomain(check);
       await CheckCalendarSources(check,folder);
       await CheckCalendarViews(check,folder);
@@ -45,7 +46,7 @@ namespace EndfieldWidget {
         Clock.ZoneOverride=()=>TimeZoneInfo.Utc;var start=new DateTimeOffset(2028,2,28,23,0,0,TimeSpan.Zero);var end=start.AddHours(1);
         var night=new CalendarEntry{Id="midnight",Kind=CalendarKind.Maintenance,Name="Midnight",Title="Midnight",Source=NewsClient.NewsUrl+"/12345",At=start,End=end};
         var midnight=new CalendarSnapshot(new[]{night},15,"");
-        check(midnight.OnDay(start.Date).Count==1 && midnight.OnDay(end.Date).Count==0,"A maintenance interval ending at midnight does not occupy the following day");
+        check(midnight.OnDay(start.Date).Count==1 && midnight.OnDay(end.Date).Count==1,"Maintenance starting before midnight and ending at midnight marks both exact endpoint dates");
         night.End=end.AddMinutes(1);midnight=new CalendarSnapshot(new[]{night},15,"");
         check(midnight.OnDay(end.Date).Count==1,"One minute past midnight correctly occupies the following leap day");
         check(CalendarSnapshot.FirstDay(new DateTime(2028,2,1)).DayOfWeek==DayOfWeek.Monday,"The leap-year month grid starts on Monday");
@@ -57,7 +58,23 @@ namespace EndfieldWidget {
         check(merged.Count==1 && merged[0].EuropeEndUnix==corrected.EuropeEndUnix && merged[0].Identity==identity,"Corrected dates keep a stable identity across whitespace, case and official articles");
         var repeat=CalendarEvent("A recurring event","10003",publication.AddDays(80),publication.AddDays(81),publication.AddDays(100));
         check(GameEventDates.Latest(new[]{a,corrected,repeat}).Count==2,"A later gameplay event with the same name remains a distinct occurrence");
-        check(CalendarData.Entries(null,new BannerState{GameEvents=new List<GameEvent>{a,corrected,repeat}},false).Select(e=>e.Id).Distinct().Count()==2,"Distinct recurring gameplay events retain separate calendar identifiers");
+        var recurring=CalendarData.Entries(null,new BannerState{GameEvents=new List<GameEvent>{a,corrected,repeat}},false);
+        check(recurring.Select(e=>e.Id).Distinct().Count()==4,"Two recurring gameplay events have separate, stable start and end identifiers");
+        var active=new CalendarSnapshot(recurring,CalendarData.AllKinds,"recurring");
+        check(active.OnDay(publication.AddDays(1).Date).Single().PeriodEnd==publication.AddDays(21) && active.OnDay(publication.AddDays(3).Date).Count==0 && active.OnDay(publication.AddDays(21).Date).Single().Kind==CalendarKind.EventEnd,"A confirmed event marks only its start and deadline while its card retains the full range");
+        var startOnly=new GameEvent{Name="Undated finish",Source=NewsClient.NewsUrl+"/10004",Published=publication.ToUnixTimeSeconds(),EuropeStartUnix=publication.AddDays(1).ToUnixTimeSeconds()};
+        var milestone=new GameEvent{Name="Area opening",Source=NewsClient.NewsUrl+"/10005",Published=publication.ToUnixTimeSeconds(),EuropeStartUnix=publication.AddDays(1).ToUnixTimeSeconds(),Category=GameEventCategory.Area};
+        var partial=new BannerState{GameEvents=new List<GameEvent>{startOnly,milestone}};
+        var dated=CalendarData.Entries(null,partial,false);
+        var opening=dated.Single(e=>e.Name=="Undated finish");
+        check(opening.Kind==CalendarKind.EventStart && !opening.RangeEnd.HasValue && !CalendarData.Affects(opening,publication.AddDays(2).Date) && CalendarPresentation.Status(opening,publication.AddDays(2))=="End date unknown","An unknown ending leaves a single start marker and an explicit unknown status");
+        check(dated.Single(e=>e.Name=="Area opening").Kind==CalendarKind.Milestone && CalendarData.Entries(null,partial,true).Count==0,"A start-only area is a milestone and missing regional dates are never borrowed");
+        var debutRecord=CalendarEvent("New operator","10006",publication,publication.AddDays(1),publication.AddDays(20));debutRecord.Category=GameEventCategory.Debut;
+        var debut=new Debut{Name=debutRecord.Name,Source=NewsClient.NewsUrl+"/10007",EuropeStart=publication.AddDays(1),AsiaStart=publication.AddDays(2)};
+        var debutState=new BannerState{Debuts=new List<Debut>{debut},GameEvents=new List<GameEvent>{debutRecord}};
+        var debutEntries=CalendarData.Entries(null,debutState,false);
+        check(debutEntries.Count==2 && debutEntries.Single(e=>e.Kind==CalendarKind.BannerEnd).Source==debutRecord.Source && !BannerClient.End(debut,false).HasValue,"A matching official calendar deadline augments the debut calendar without modifying the main banner");
+        check(CalendarData.Entries(null,debutState,true).Single().Kind==CalendarKind.Debut,"The fallback deadline must match the debut start for the selected region");
         var bad=new Schedule{Version="Invalid",Source=NewsClient.NewsUrl+"/12345",Start=publication,End=publication.AddMinutes(-1)};
         check(CalendarData.Entries(bad,null,false).Count==0,"A reversed official interval cannot enter a calendar snapshot");
         bad.End=publication.AddHours(1);bad.Source="https://example.com/12345";
@@ -73,7 +90,7 @@ namespace EndfieldWidget {
         var order=CalendarData.Ordered(new[]{entries[0],new CalendarEntry{Id="three",Name="Maintenance",Title="Maintenance",Kind=CalendarKind.Maintenance,At=entries[0].At}}).ToList();
         check(order[0].Kind==CalendarKind.Maintenance,"Simultaneous events use a stable category order");
         check(CalendarPresentation.Status(night,start.AddMinutes(30)).StartsWith("Ongoing") && CalendarPresentation.Status(entries[0],entries[0].At.AddMinutes(1))=="Ended","Cards distinguish an active interval from a completed deadline");
-        check(CalendarPresentation.Status(entries[1],entries[1].At.AddMinutes(1))=="Debut has started","A completed debut has a clear event-specific status");
+        check(CalendarPresentation.Status(entries[1],entries[1].At.AddMinutes(1))=="Debut has started · End date unknown","A debut with no announced ending reports both its start and unknown ending");
         check(CalendarPresentation.Status(entries[0],entries[0].At.AddHours(-11)).Contains("11 hours"),"Calendar relative timing uses the correct default-language plural for eleven hours");
         var moments=new[]{new DateTimeOffset(2026,10,14,22,30,0,TimeSpan.Zero),new DateTimeOffset(2026,10,25,0,59,0,TimeSpan.Zero),new DateTimeOffset(2026,10,25,1,1,0,TimeSpan.Zero),new DateTimeOffset(2028,2,29,23,59,0,TimeSpan.Zero),new DateTimeOffset(2026,12,31,23,59,0,TimeSpan.Zero)};
         foreach(string id in new[]{"UTC","FLE Standard Time","Eastern Standard Time","India Standard Time","Tokyo Standard Time","Lord Howe Standard Time"}) {
@@ -109,7 +126,7 @@ namespace EndfieldWidget {
           check(partial.Partial && partial.Events.Count==1 && partial.Sources.Single().Problem=="server" && partial.Events[0].EuropeEndUnix==correction.Events[0].EuropeEndUnix,"A server outage preserves the last confirmed deadline and records the real partial state");
           check(IsTransientFailure(new BulletinException("server",503)) && !IsTransientFailure(new BulletinException("rate-limit",429)),"Temporary server failures retry while rate limits do not cause rapid global retry loops");
           fixture.Failures.Clear();fixture.SetBody("80001",CalendarArticle(published,"Before the next version update and maintenance"));var withdrawn=await client.FetchCalendar(partial);
-          check(!withdrawn.Partial && withdrawn.Events.Count==0 && withdrawn.Sources.Single().Undated,"A successful withdrawal of the exact date does not leave an obsolete cached deadline");
+          check(!withdrawn.Partial && withdrawn.Events.Count==1 && withdrawn.Events[0].EuropeEndUnix==0 && withdrawn.Events[0].EuropeStartUnix>0,"A successful withdrawal of the exact end retains the published start without the obsolete cached deadline");
           fixture.SetBody("80001","<p>A changed layout with no time section.</p>");var malformed=await client.FetchCalendar(correction);
           check(malformed.Partial && malformed.Events.Count==1 && malformed.Sources.Single().Problem=="format","A changed article format retains known dates without claiming a complete update");
           fixture.SetBody("80001",CalendarArticle(published,"Mar. 31, 2029 at 04:00"));fixture.DelayMilliseconds=180;
@@ -153,10 +170,13 @@ namespace EndfieldWidget {
     async Task CheckCalendarViews(Action<bool,string> check,string folder) {
       var oldZone=Clock.ZoneOverride;var oldNow=calendarNow;var oldSchedule=schedule;var oldBanners=bannerState;var oldFeed=calendarFeed;var oldMask=calendarFilterMask;string oldQuery=calendarQuery,oldRegion=config.BannerRegion;var oldBounds=calendarLastBounds;
       try {
-        if(calendarDialog!=null)calendarDialog.Close();var utc=TimeZoneInfo.Utc;Clock.ZoneOverride=()=>utc;var now=new DateTimeOffset(2026,11,5,8,0,0,TimeSpan.Zero);calendarNow=()=>now;calendarRemembered=false;calendarFilterMask=15;calendarQuery="";calendarFeed=null;config.BannerRegion="Europe";
+        if(calendarDialog!=null)calendarDialog.Close();var utc=TimeZoneInfo.Utc;Clock.ZoneOverride=()=>utc;var now=new DateTimeOffset(2026,11,5,8,0,0,TimeSpan.Zero);calendarNow=()=>now;calendarRemembered=false;calendarFilterMask=CalendarData.AllKinds;calendarQuery="";calendarFeed=null;config.BannerRegion="Europe";
         schedule=new Schedule{Version="Sanctuary of Ink",Source=NewsClient.NewsUrl+"/80001",Start=now.AddHours(-1),End=now.AddHours(5)};
         string html=Json.Str(Json.Decode(File.ReadAllText(Path.Combine(folder,"version-9560.json"))),"data","data");
         bannerState=new BannerState{Debuts=new List<Debut>{new Debut{Name="Si",Source=NewsClient.NewsUrl+"/9560",EuropeStart=now.AddDays(-20),AsiaStart=now.AddDays(-20),EuropeEndUnix=now.AddHours(8).ToUnixTimeSeconds(),AsiaEndUnix=now.AddHours(8).ToUnixTimeSeconds()},new Debut{Name="Argent Flow",Source=NewsClient.NewsUrl+"/9560",EuropeStart=now.AddHours(9),AsiaStart=now.AddHours(9)}},GameEvents=GameEventDates.Parse(html,"[Sanctuary of Ink] Version Update Notes","9560",1792026000)};
+        var rerunRecord=CalendarEvent("Featured rerun","80002",now.AddDays(-2),now.AddHours(1),now.AddDays(4));rerunRecord.Category=GameEventCategory.Rerun;
+        var weaponRecord=CalendarEvent("Featured weapon issue","80003",now.AddDays(-2),now.AddHours(1),now.AddDays(4));weaponRecord.Category=GameEventCategory.Weapon;
+        bannerState.GameEvents.AddRange(new[]{rerunRecord,weaponRecord});
         ShowCalendar();calendarDialog.UpdateLayout();SelectCalendarDay(now.Date);calendarDialog.UpdateLayout();
         var nativeHandle=new WindowInteropHelper(calendarDialog).Handle;long nativeExtended=DesktopNative.GetStyle(nativeHandle,DesktopNative.ExtendedStyleIndex),nativeStyle=DesktopNative.GetStyle(nativeHandle,DesktopNative.StyleIndex);
         check(!calendarDialog.AllowsTransparency && (nativeExtended&0x80000)==0 && (nativeExtended&DesktopNative.ToolWindow)!=0 && (nativeExtended&DesktopNative.AppWindow)==0,"The calendar uses the ordinary accelerated window path while remaining outside Alt+Tab and the taskbar");
@@ -165,6 +185,10 @@ namespace EndfieldWidget {
         DesktopNative.Rectangle nativeBounds;DesktopNative.GetWindowRect(nativeHandle,out nativeBounds);int hitX=nativeBounds.Left+2,hitY=(nativeBounds.Top+nativeBounds.Bottom)/2;long hit=CalendarNativeMessage(nativeHandle,0x84,IntPtr.Zero,new IntPtr(unchecked((hitY&65535)<<16 | hitX&65535))).ToInt64();
         check(hit==10,"The native calendar frame recognizes its resize border without synthetic dragging");
         check(calendarDay==now.Date && calendarMonth==new DateTime(2026,11,1),"The first calendar opening consistently uses its injected current local day");
+        var backdrop=CalendarFind<Grid>("CalendarBackdrop");var frame=CalendarFind<Border>("CalendarFrame");
+        check(backdrop.ActualWidth>=frame.ActualWidth-2 && backdrop.ActualHeight>=frame.ActualHeight-2 && !backdrop.IsHitTestVisible,"The official artwork layer covers the entire calendar and accepts no pointer input");
+        var hero=CalendarFind<Image>("CalendarHeroImage");var header=CalendarFind<Grid>("CalendarDragHandle");
+        check(hero.IsDescendantOf(header) && Grid.GetColumn(hero)==1 && CalendarVisualElements<Image>(backdrop).Single().Opacity<0.1,"The full-strength art belongs to the right side of the header, with a faint echo behind the dashboard");
         check(CalendarFind<UniformGrid>("CalendarDays").Children.Count==42 && calendarDayVisuals.Select(v=>v.Button).Distinct().Count()==42,"The new view creates exactly one reusable button for each day cell");
         check(CalendarFind<ListBox>("CalendarAgenda").Items.Count>=5 && calendarSnapshot.OnDay(now.Date).Count>=4,"The real view combines all calendar categories and multiple events on one day");
         CommandManager.InvalidateRequerySuggested();await calendarDialog.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
@@ -188,7 +212,7 @@ namespace EndfieldWidget {
         check(calendarMonth.Month==10 && calendarDay.Month==10,"Clicking a neighboring-month day moves the month and selection together");
         CalendarFind<Button>("CalendarToday").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         var search=CalendarFind<TextBox>("CalendarSearch");search.Focus();await TestTextInput(search,"arena");ApplyCalendarSearch();calendarDialog.UpdateLayout();
-        check(calendarSnapshot.Entries.Count==1 && CalendarFind<ListBox>("CalendarAgenda").Items.Count==1 && calendarSnapshot.Entries[0].Name=="Arena of Games","The real search input filters the grid, future agenda and model together");
+        check(calendarSnapshot.Entries.Count==2 && CalendarFind<ListBox>("CalendarAgenda").Items.Count==1 && calendarSnapshot.Entries.All(e=>e.Name=="Arena of Games"),"The real search input filters both dated entries and the future agenda together");
         var searchHost=search.Template.FindName("PART_ContentHost",search) as ScrollViewer;var character=search.GetRectFromCharacterIndex(0);
         check(searchHost!=null && searchHost.ActualHeight>=search.ActualHeight-4 && character.Left<search.Padding.Left+8 && character.Top<search.Padding.Top+6,"Search text has a full-height content host and one set of padding so typed glyphs remain visible");
         CalendarFind<Button>("CalendarUpcoming").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -201,6 +225,10 @@ namespace EndfieldWidget {
         check(rebound.Count>0 && rebound.All(b=>b.IsEnabled && b.Command.CanExecute(null)),"Newly rebound source actions are immediately enabled without waiting for input or a global command requery");
         var filter=CalendarFind<ToggleButton>("CalendarEventEnds");filter.IsChecked=false;filter.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
         check(calendarSnapshot.Entries.All(e=>e.Kind!=CalendarKind.EventEnd) && calendarAgendaModels.All(m=>m.Entry.Kind!=CalendarKind.EventEnd),"Category toggles consistently filter the calendar and agenda");
+        var reruns=CalendarFind<ToggleButton>("CalendarReruns");
+        check(reruns.IsVisible && calendarSnapshot.Entries.Any(e=>e.Kind==CalendarKind.RerunStart),"Rerun banners expose their own calendar filter");
+        reruns.IsChecked=false;reruns.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        check(calendarSnapshot.Entries.All(e=>e.Kind!=CalendarKind.RerunStart && e.Kind!=CalendarKind.RerunEnd) && calendarSnapshot.Entries.Any(e=>e.Kind==CalendarKind.WeaponStart),"Turning off reruns removes both markers and keeps weapon banners visible");
         CalendarFind<ToggleButton>("CalendarAll").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));SelectCalendarDay(now.Date);
         CalendarFind<Button>("CalendarMonth").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));CalendarFind<ComboBox>("CalendarPickerMonth").SelectedIndex=1;CalendarFind<TextBox>("CalendarPickerYear").Text="2028";ApplyCalendarPicker();
         check(calendarMonth==new DateTime(2028,2,1),"The month picker jumps directly to a leap-year February");
@@ -217,9 +245,12 @@ namespace EndfieldWidget {
         var priorNow=now;now=new DateTimeOffset(2026,11,6,0,0,0,TimeSpan.Zero);TickCalendar(now);
         check(calendarDayVisuals.Single(v=>(DateTime)v.Button.Tag==now.Date).Button.BorderThickness.Left>1 && calendarDayVisuals.Single(v=>(DateTime)v.Button.Tag==priorNow.Date).Button.BorderThickness.Left==1,"The shared background tick moves the Today outline across midnight while preserving selection");now=priorNow;RenderCalendar(false);
         SaveImage(calendarDialog,Path.Combine(folder,"calendar-overview.png"));
+        await CheckCalendarCardArtwork(check,folder);
         foreach(double scale in new[]{1,1.25,1.5,1.75,2}) {
-          calendarDialog.Width=Math.Max(420,960/scale);calendarDialog.Height=Math.Max(400,790/scale);calendarDialog.UpdateLayout();LayoutCalendar();calendarDialog.UpdateLayout();
+          calendarDialog.Width=Math.Max(420,1160/scale);calendarDialog.Height=Math.Max(400,790/scale);calendarDialog.UpdateLayout();LayoutCalendar();calendarDialog.UpdateLayout();
           bool stacked=calendarDialog.ActualWidth<790;check(Grid.GetRow(CalendarFind<Grid>("CalendarAgendaPane"))==(stacked?1:0) && CalendarFind<Button>("CalendarClose").IsVisible && CalendarFind<ScrollViewer>("CalendarBodyScroll").ViewportHeight>0,"Responsive logical layout remains navigable at simulated DPI "+scale.ToString(CultureInfo.InvariantCulture));
+          check(Grid.GetRow(CalendarFind<WrapPanel>("CalendarFilters"))==(calendarDialog.ActualWidth<1000?1:0),"Search and filter controls share the wide toolbar and stack at narrower widths");
+          check(CalendarFind<TextBlock>("CalendarWordmark").FontSize==(calendarDialog.ActualWidth<640?29:39) && CalendarFind<Grid>("CalendarHeaderArt").Opacity==(calendarDialog.ActualWidth<640?0.37:1),"The header scales the brand and keeps the title readable on narrow windows");
           SaveImage(calendarDialog,Path.Combine(folder,"calendar-dpi-"+scale.ToString(CultureInfo.InvariantCulture).Replace('.','_')+".png"));
         }
         calendarDialog.Width=960;calendarDialog.Height=790;calendarDialog.UpdateLayout();LayoutCalendar();
@@ -237,7 +268,7 @@ namespace EndfieldWidget {
         bannerState=new BannerState{GameEvents=Enumerable.Range(0,1000).Select(i=>CalendarEvent("Long official gameplay event name "+i+" with a readable second line",""+(60000+i),now.AddDays(-1),now.AddHours(1+i%28),now.AddDays(1+i%28))).ToList()};schedule=null;RenderCalendar();calendarDialog.UpdateLayout();
         await calendarDialog.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);
         int realized=CalendarVisualCount<ListBoxItem>(CalendarFind<ListBox>("CalendarAgenda"));
-        check(calendarAgendaModels.Count==1000 && realized>0 && realized<100,"The future agenda virtualizes a thousand events instead of creating a thousand visible cards");
+        check(calendarAgendaModels.Count==2000 && realized>0 && realized<100,"The future agenda virtualizes two thousand dated entries instead of creating two thousand visible cards");
         SelectCalendarDay(now.AddDays(1).Date);calendarDialog.UpdateLayout();var dayScroll=CalendarDayScroller();var agendaScroll=FindCalendarVisual<ScrollViewer>(CalendarFind<ListBox>("CalendarAgenda"));dayScroll.ScrollToVerticalOffset(15);agendaScroll.ScrollToVerticalOffset(15);await calendarDialog.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
         check(calendarDayModels.Count>20 && CalendarVisualCount<ListBoxItem>(CalendarFind<ListBox>("CalendarEvents"))<10,"A crowded selected day also virtualizes cards instead of eagerly building its entire list");
         double dayOffset=dayScroll.VerticalOffset,agendaOffset=agendaScroll.VerticalOffset;var updated=bannerState.GameEvents[0];bannerState.GameEvents[0]=CalendarEvent(updated.Name,"60000",now.AddDays(-1),now.AddHours(1),DateTimeOffset.FromUnixTimeSeconds(updated.EuropeEndUnix).AddMinutes(30));RenderCalendar();calendarDialog.UpdateLayout();await calendarDialog.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);

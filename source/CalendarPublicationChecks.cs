@@ -89,12 +89,15 @@ namespace EndfieldWidget {
   }
   sealed class CalendarArtworkFixture:HttpMessageHandler {
     readonly byte[] bytes;
+    readonly string mediaType;
     internal HttpStatusCode Status=HttpStatusCode.OK;
     internal long? Length;
-    internal CalendarArtworkFixture(byte[] value){bytes=value;}
+    internal int Requests;
+    internal CalendarArtworkFixture(byte[] value,string type="image/jpeg"){bytes=value;mediaType=type;}
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token) {
+      Requests++;
       var response=new HttpResponseMessage(Status){Content=new ByteArrayContent(bytes)};
-      response.Content.Headers.ContentType=new MediaTypeHeaderValue("image/jpeg");
+      response.Content.Headers.ContentType=new MediaTypeHeaderValue(mediaType);
       if(Length.HasValue)response.Content.Headers.ContentLength=Length;
       return Task.FromResult(response);
     }

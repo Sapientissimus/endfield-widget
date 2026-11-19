@@ -614,10 +614,10 @@ namespace EndfieldWidget {
       if(string.IsNullOrEmpty(detail))return "";
       return detail;
     }
-    static void Open(string url) {
+    static void Open(string url,Action<string> launch=null) {
       Uri uri; if(!Uri.TryCreate(url,UriKind.Absolute,out uri) || uri.Scheme!="https")return;
-      if(uri.Host!="endfield.gryphline.com" && uri.Host!="www.skport.com" && uri.Host!="game.skport.com" && !(uri.Host=="web-api.skport.com" && uri.AbsolutePath=="/cookie_store/account_token"))return;
-      System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url){UseShellExecute=true});
+      if(uri.Host!="endfield.gryphline.com" && uri.Host!="www.skport.com" && uri.Host!="game.skport.com" && !(uri.Host=="web-api.skport.com" && uri.AbsolutePath=="/cookie_store/account_token") && !OfficialLivestreams.IsWatchUrl(url))return;
+      if(launch!=null)launch(url);else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url){UseShellExecute=true});
     }
     void Settings() {
       if(settingsDialog!=null && settingsDialog.IsVisible){settingsDialog.Activate();return;}

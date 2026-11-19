@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- Discover scheduled version-preview livestreams from the official YouTube channel and display their start time in the Windows time zone.
+- Display the verified video's own thumbnail on its calendar card. Open the direct video link from the announcement action.
+- Localize the stream card caption while retaining its original title in details and search.
+- Replace the announcement button's enclosing focus frame with an accessible underline.
+- Consolidate intermediate local builds into this public feature release.
+
 ## 1.2.5
 
 - Expand the calendar with reruns, weapon banners, sign-in events, Sanity Supply and dated milestones from official announcements.

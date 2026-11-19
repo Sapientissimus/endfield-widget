@@ -30,6 +30,7 @@ namespace EndfieldWidget {
       }));
     }
     async Task CheckCalendarUpgrade(Action<bool,string> check,string folder) {
+      await CheckOfficialLivestreams(check,folder);
       await CheckExpandedPublication(check,folder);
       CheckCalendarDomain(check);
       await CheckCalendarSources(check,folder);
@@ -199,6 +200,14 @@ namespace EndfieldWidget {
         string opened=null;calendarOpenOverride=url=>opened=url;cards[0].Command.Execute(cards[0].CommandParameter);
         check(CalendarData.Official(opened),"The real card action opens its official source through the validated command");
         check(!calendarSourceCommand.CanExecute(new CalendarEntry{Source="https://example.com/"}),"The calendar source command rejects an arbitrary external address");
+        var sourceButton=cards[0];sourceButton.Focus();Keyboard.Focus(sourceButton);calendarDialog.UpdateLayout();
+        var sourceFocus=sourceButton.Template.FindName("SourceFocus",sourceButton) as Border;
+        var sourceContent=sourceButton.Template.FindName("SourceContent",sourceButton) as ContentPresenter;
+        check(sourceButton.IsKeyboardFocused && sourceFocus!=null && sourceFocus.IsVisible && sourceContent!=null,"The announcement action retains a visible keyboard focus indicator");
+        var focusBounds=sourceFocus.TransformToAncestor(sourceButton).TransformBounds(new Rect(sourceFocus.RenderSize));
+        var contentBounds=sourceContent.TransformToAncestor(sourceButton).TransformBounds(new Rect(sourceContent.RenderSize));
+        check(focusBounds.Top>=contentBounds.Bottom && focusBounds.Bottom<=sourceButton.ActualHeight && contentBounds.Left>=5 && contentBounds.Right<=sourceButton.ActualWidth-5,"Announcement focus stays below its content and leaves padding around the text and external-link glyph");
+        SaveImage(calendarDialog,Path.Combine(folder,"calendar-announcement-focus.png"));
         var dayButton=calendarDayVisuals.Single(v=>(DateTime)v.Button.Tag==now.Date).Button;
         check(dayButton.BorderThickness.Left>1 && (string)dayButton.GetValue(System.Windows.Automation.AutomationProperties.NameProperty)!=null,"Today keeps its distinct outline and accessible name while selected");
         var controls=calendarDayVisuals.Select(v=>v.Button).ToArray();int gridBuilds=CalendarGridBuilds,cardBuilds=CalendarCardBuilds,agendaBuilds=CalendarAgendaBuilds;RenderCalendar(false);

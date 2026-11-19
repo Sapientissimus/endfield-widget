@@ -8,7 +8,7 @@ namespace EndfieldWidget {
   sealed class CalendarSourceCommand:ICommand {
     readonly Action<CalendarEntry> open;
     public CalendarSourceCommand(Action<CalendarEntry> callback){open=callback;}
-    public bool CanExecute(object parameter){var entry=parameter as CalendarEntry;return entry!=null && CalendarData.Official(entry.Source);}
+    public bool CanExecute(object parameter){return CalendarData.SourceUrl(parameter as CalendarEntry)!=null;}
     public void Execute(object parameter){if(CanExecute(parameter))open((CalendarEntry)parameter);}
     public event EventHandler CanExecuteChanged {add{CommandManager.RequerySuggested+=value;} remove{CommandManager.RequerySuggested-=value;}}
   }
@@ -25,7 +25,7 @@ namespace EndfieldWidget {
   public sealed class CalendarCardModel:INotifyPropertyChanged {
     internal readonly CalendarEntry Entry;
     public string Id {get{return Entry.Id;}}
-    public string Name {get{return Entry.Name??Entry.Title;}}
+    public string Name {get{return CalendarData.DisplayName(Entry);}}
     public string Category {get{return CalendarData.Label(Entry.Kind);}}
     public Brush CategoryBrush {get{return CalendarPresentation.BrushFor(Entry.Kind);}}
     public string Icon {get{return CalendarPresentation.Icon(Entry.Kind);}}

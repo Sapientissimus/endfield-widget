@@ -94,6 +94,7 @@ namespace EndfieldWidget {
     internal async Task<CalendarDetailRecord> FetchCalendarDetail(CalendarEntry entry) {return await InPublication(()=>FetchCalendarDetailCore(entry)).ConfigureAwait(false);}
     internal async Task<CalendarDetailRecord> FetchCalendarDetailCore(CalendarEntry entry) {
       if(!CalendarData.Official(entry.Source))throw new FormatException("An official source is required.");
+      if(entry.Source==OfficialLivestreams.Source)return new CalendarDetailRecord{Key=CalendarDetailsData.Key(entry),PublicationCode=Publications.Current.Code,Source=entry.Source,Description=entry.Name,Participation="",Checked=DateTimeOffset.UtcNow};
       string cid=entry.Source.Substring(entry.Source.LastIndexOf('/')+1);var value=await Read(Api+"/"+cid+"?"+Query).ConfigureAwait(false);
       var result=CalendarDetailsData.Parse(Json.Str(value,"data","data"),Json.Str(value,"data","title"),entry,DateTimeOffset.UtcNow);
       result.Description=LocalizedArticles.TranslateExcerpt(value,result.Description,"\n\n");result.Participation=LocalizedArticles.TranslateExcerpt(value,result.Participation,"\n");return result;

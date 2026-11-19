@@ -322,8 +322,8 @@ namespace EndfieldWidget {
       if(root==null)return null;if(root is T)return (T)root;for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){var value=FindCalendarVisual<T>(VisualTreeHelper.GetChild(root,i));if(value!=null)return value;}return null;
     }
     void OpenCalendarSource(CalendarEntry entry) {
-      if(!CalendarData.Official(entry.Source))return;calendarSelectedId=entry.Id;
-      if(calendarOpenOverride!=null)calendarOpenOverride(entry.Source);else Open(entry.Source);
+      string url=CalendarData.SourceUrl(entry);if(url==null)return;calendarSelectedId=entry.Id;
+      Open(url,calendarOpenOverride);
     }
     void ScheduleCalendarPaint(DateTimeOffset now) {
       var zone=Clock.ZoneOverride==null?TimeZoneInfo.Local:Clock.ZoneOverride();var midnight=Clock.Local(now).Date.AddDays(1);
@@ -356,7 +356,7 @@ namespace EndfieldWidget {
        <TextBlock Text=""{DynamicResource Locale.f6e376bf5db74e983dc86da7}"" Visibility=""{Binding Details.ParticipationVisibility}"" FontSize=""9"" FontWeight=""SemiBold"" Foreground=""{DynamicResource ThemeSoftAccentBrush}"" Margin=""0,12,0,5""/><TextBlock Text=""{Binding Details.Participation}"" Visibility=""{Binding Details.ParticipationVisibility}"" Foreground=""{DynamicResource ThemeTextBrush}"" TextWrapping=""Wrap"" FontSize=""12"" LineHeight=""18""/>
        <TextBlock Text=""{Binding Details.Notice}"" Visibility=""{Binding Details.NoticeVisibility}"" Foreground=""{DynamicResource ThemeMutedBrush}"" FontSize=""11"" TextWrapping=""Wrap"" Margin=""0,5,0,0""/><Button Content=""{DynamicResource Locale.d8b8392e2c542950ca648671}"" Visibility=""{Binding Details.RetryVisibility}"" Command=""{Binding Details.Retry}"" HorizontalAlignment=""Left"" Padding=""8,6"" Margin=""0,8,0,0""/>
       </StackPanel></Border></local:CalendarReveal>";
-      string actions=@"<WrapPanel HorizontalAlignment=""Right"" Margin=""0,3,0,0""><ToggleButton Style=""{DynamicResource CalendarDetailToggle}"" Content=""{Binding Details.Label}"" IsChecked=""{Binding Details.IsExpanded,Mode=TwoWay}"" Margin=""0,0,8,0"" AutomationProperties.Name=""{DynamicResource Locale.bbc59c7fb3a3860162e30144}""/><Button Command=""{Binding OpenSource}"" CommandParameter=""{Binding SourceTarget}"" AutomationProperties.Name=""{Binding AccessibleName}"" Background=""Transparent"" HorizontalAlignment=""Left"" Padding=""0,6,6,6"">"+source+"</Button></WrapPanel>";
+      string actions=@"<WrapPanel HorizontalAlignment=""Right"" Margin=""0,3,0,0""><ToggleButton Style=""{DynamicResource CalendarDetailToggle}"" Content=""{Binding Details.Label}"" IsChecked=""{Binding Details.IsExpanded,Mode=TwoWay}"" Margin=""0,0,8,0"" AutomationProperties.Name=""{DynamicResource Locale.bbc59c7fb3a3860162e30144}""/><Button Style=""{DynamicResource CalendarSourceAction}"" Command=""{Binding OpenSource}"" CommandParameter=""{Binding SourceTarget}"" AutomationProperties.Name=""{Binding AccessibleName}"" Background=""Transparent"" HorizontalAlignment=""Left"">"+source+"</Button></WrapPanel>";
       calendarCardTemplate=calendarAgendaTemplate=(DataTemplate)XamlReader.Parse(start+actions+details+"</StackPanel></DataTemplate>");
     }
     Window CreateCalendarWindow() {

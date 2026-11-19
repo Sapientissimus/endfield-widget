@@ -20,7 +20,9 @@ namespace EndfieldWidget {
   }
   static class CalendarData {
     public const int AllKinds=(1<<(int)CalendarKind.WeaponEnd)-1;
-    public static bool Official(string source){return source!=null && Publications.Official(source);}
+    public static bool Official(string source){return source==OfficialLivestreams.Source || source!=null && Publications.Official(source);}
+    public static string SourceUrl(CalendarEntry entry){return entry==null?null:entry.Source==OfficialLivestreams.Source?OfficialLivestreams.CardUrl(entry):Official(entry.Source)?entry.Source:null;}
+    public static string DisplayName(CalendarEntry entry){return entry.Source==OfficialLivestreams.Source?L.T("Version preview livestream"):entry.Name??entry.Title;}
     public static string Normalize(string text){return Regex.Replace((text??"").Normalize(NormalizationForm.FormKC).Replace('\u2019','\''),@"\s+"," ").Trim().ToLowerInvariant();}
     public static string Label(CalendarKind kind) {
       switch(kind) {
@@ -74,6 +76,7 @@ namespace EndfieldWidget {
           case GameEventCategory.Rerun:startKind=CalendarKind.RerunStart;endKind=CalendarKind.RerunEnd;break;
           case GameEventCategory.Weapon:startKind=CalendarKind.WeaponStart;endKind=CalendarKind.WeaponEnd;break;
           case GameEventCategory.Area:
+          case GameEventCategory.Livestream:
           case GameEventCategory.ContentUpdate:if(!end.HasValue)startKind=CalendarKind.Milestone;break;
         }
         string id="game:"+item.Identity;
@@ -111,7 +114,7 @@ namespace EndfieldWidget {
     public string Fingerprint {get;private set;}
     public CalendarSnapshot(IEnumerable<CalendarEntry> source,int mask,string query) {
       string search=CalendarData.Normalize(query);
-      entries=CalendarData.Ordered(source.Where(e=>(CalendarData.Mask(e.Kind)&mask)!=0 && (search.Length==0 || CalendarData.Normalize((e.Name??e.Title)+" "+CalendarData.Label(e.Kind)).Contains(search)))).ToList().AsReadOnly();
+      entries=CalendarData.Ordered(source.Where(e=>(CalendarData.Mask(e.Kind)&mask)!=0 && (search.Length==0 || CalendarData.Normalize(CalendarData.DisplayName(e)+" "+(e.Name??e.Title)+" "+CalendarData.Label(e.Kind)).Contains(search)))).ToList().AsReadOnly();
       Fingerprint=CalendarData.Fingerprint(entries)+"|"+CalendarData.ZoneKey();
       var building=new Dictionary<DateTime,List<CalendarEntry>>();
       foreach(var entry in entries)foreach(var day in CalendarData.GridDays(entry)) {

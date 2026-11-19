@@ -52,8 +52,8 @@ namespace EndfieldWidget {
       return related.FirstOrDefault(s=>!s.IsVersionOverview)??direct??related.FirstOrDefault(s=>s.IsVersionOverview);
     }
 
-    internal static Task<ImageSource> Get(string url) {
-      if(!IsOfficial(url))return Task.FromResult<ImageSource>(null);
+    internal static Task<ImageSource> Get(string url,string livestreamIdentity=null) {
+      if(!IsOfficial(url) && !OfficialLivestreams.IsThumbnail(url,livestreamIdentity))return Task.FromResult<ImageSource>(null);
       lock(gate) {
         Task<ImageSource> pending;
         if(cache.TryGetValue(url,out pending))return pending;
@@ -63,13 +63,13 @@ namespace EndfieldWidget {
           cache.Remove(available);
         }
         // Reuse one request for all cards and the background using this URL.
-        pending=Task.Run(()=>Download(http,url));cache[url]=pending;
+        pending=Task.Run(()=>Download(http,url,livestreamIdentity));cache[url]=pending;
         return pending;
       }
     }
 
-    internal static async Task<ImageSource> Download(HttpClient transport,string url) {
-      if(!IsOfficial(url))return null;
+    internal static async Task<ImageSource> Download(HttpClient transport,string url,string livestreamIdentity=null) {
+      if(!IsOfficial(url) && !OfficialLivestreams.IsThumbnail(url,livestreamIdentity))return null;
       await throttle.WaitAsync().ConfigureAwait(false);
       try {
         using(var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(12)))
@@ -129,19 +129,20 @@ namespace EndfieldWidget {
     string calendarHeroArtworkUrl;
     internal HttpClient calendarArtworkTransportOverride;
 
-    Task<ImageSource> FetchCalendarImage(string url) {
-      return calendarArtworkTransportOverride==null?CalendarArtwork.Get(url):CalendarArtwork.Download(calendarArtworkTransportOverride,url);
+    Task<ImageSource> FetchCalendarImage(string url,string livestreamIdentity=null) {
+      return calendarArtworkTransportOverride==null?CalendarArtwork.Get(url,livestreamIdentity):CalendarArtwork.Download(calendarArtworkTransportOverride,url,livestreamIdentity);
     }
 
     internal async void LoadCalendarArtwork(CalendarCardModel card) {
       if(Storage.Isolated && calendarArtworkTransportOverride==null || card==null)return;
       var article=CalendarArtwork.CardArticle(calendarFeed==null?null:calendarFeed.Sources,card.Entry);
-      string url=article==null?null:article.ArtworkUrl;
+      var stream=OfficialLivestreams.CardArtwork(calendarFeed==null?null:calendarFeed.Sources,card.Entry);
+      string url=stream!=null?stream.ArtworkUrl:article==null?null:article.ArtworkUrl;
       if(card.ArtworkRequestedUrl==url)return;
       card.ArtworkRequestedUrl=url;card.SetArtwork(null,null);
       if(url==null)return;
-      var image=await FetchCalendarImage(url);
-      if(card.ArtworkRequestedUrl==url)card.SetArtwork(image,article.ArtworkTitle??article.Source);
+      var image=await FetchCalendarImage(url,stream==null?null:stream.Identity);
+      if(card.ArtworkRequestedUrl==url)card.SetArtwork(image,stream!=null?stream.Name:article.ArtworkTitle??article.Source);
     }
 
     internal async void LoadCalendarHeroArtwork(Image target) {

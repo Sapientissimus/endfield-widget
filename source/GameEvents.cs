@@ -6,12 +6,13 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EndfieldWidget {
-  public enum GameEventCategory {Event,Rerun,Weapon,SignIn,Supply,Trial,Area,Gameplay,Season,Exchange,ContentUpdate,Debut}
+  public enum GameEventCategory {Event,Rerun,Weapon,SignIn,Supply,Trial,Area,Gameplay,Season,Exchange,ContentUpdate,Debut,Livestream}
   public sealed class GameEvent {
     public string Name {get;set;}
     public string Source {get;set;}
     public long Published {get;set;}
     public string Identity {get;set;}
+    public string ArtworkUrl {get;set;}
     public bool FromOverview {get;set;}
     public GameEventCategory Category {get;set;}
     public long EuropeStartUnix {get;set;}
@@ -163,6 +164,7 @@ namespace EndfieldWidget {
       return result;
     }
     static bool SameOccurrence(GameEvent first,GameEvent second) {
+      if(first.Category==GameEventCategory.Livestream)return first.Identity==second.Identity;
       if(first.Category==GameEventCategory.ContentUpdate)return first.EuropeStartUnix==second.EuropeStartUnix && first.AsiaStartUnix==second.AsiaStartUnix;
       if(first.Source==second.Source)return true;
       long start=first.EuropeStartUnix>0?first.EuropeStartUnix:first.AsiaStartUnix,other=second.EuropeStartUnix>0?second.EuropeStartUnix:second.AsiaStartUnix;

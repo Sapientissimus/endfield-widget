@@ -22,6 +22,18 @@
     <Border x:Name="FocusRing" CornerRadius="4" Margin="2" BorderThickness="1" BorderBrush="{DynamicResource ThemeAccentBrush}" IsHitTestVisible="False" Visibility="Collapsed"/>
    </Grid><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="Opacity" Value="0.78"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter TargetName="Face" Property="Opacity" Value="0.6"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.42"/><Setter Property="Cursor" Value="Arrow"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
   </Style>
+  <Style x:Key="CalendarSourceAction" TargetType="Button">
+   <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/><Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="5,6"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Face" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="3"><Grid>
+    <ContentPresenter x:Name="SourceContent" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+    <Border x:Name="SourceFocus" Height="2" VerticalAlignment="Bottom" Margin="0,0,0,-4" Background="{DynamicResource ThemeAccentBrush}" IsHitTestVisible="False" Visibility="Collapsed"/>
+   </Grid></Border><ControlTemplate.Triggers>
+    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Face" Property="Background" Value="{DynamicResource CalendarInputBrush}"/></Trigger>
+    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SourceFocus" Property="Visibility" Value="Visible"/></Trigger>
+    <Trigger Property="IsPressed" Value="True"><Setter TargetName="SourceContent" Property="Opacity" Value="0.65"/></Trigger>
+    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.42"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
+   </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="CalendarDayStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
    <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>

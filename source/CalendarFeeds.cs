@@ -53,7 +53,7 @@ namespace EndfieldWidget {
     static string Filename {get{return Publications.Cache("calendar");}}
     internal static bool Valid(CalendarFeedState value) {
       if(value==null || value.Schema!=CalendarFeedState.CurrentSchema || value.Sources==null || value.Sources.Count>96)return false;
-      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160)) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
+      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160 && (string.IsNullOrEmpty(e.ArtworkUrl) || e.Source==OfficialLivestreams.Source && e.Category==GameEventCategory.Livestream && OfficialLivestreams.IsThumbnail(e.ArtworkUrl,e.Identity)))) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
     }
     static CalendarFeedState Read(string path) {
       try{if(new FileInfo(path).Length>4000000)return null;var state=new JavaScriptSerializer{MaxJsonLength=4000000}.Deserialize<CalendarFeedState>(File.ReadAllText(path,Encoding.UTF8));if(!Valid(state))return null;var restored=CalendarFeedState.FromSources(state.Sources,state.Checked,0,state.Partial);restored.PublicationCode=state.PublicationCode??Publications.Current.Code;return restored;}catch{return null;}
@@ -74,15 +74,19 @@ namespace EndfieldWidget {
     public async Task<CalendarFeedState> FetchCalendar(CalendarFeedState previous) {return await InPublication(()=>FetchCalendarCore(previous)).ConfigureAwait(false);}
     public async Task<CalendarFeedState> FetchCalendarCore(CalendarFeedState previous) {
       var now=DateTimeOffset.UtcNow;previous=previous??CalendarFeedState.Seed(null);
-      List<Dictionary<string,object>> archive;
-      try{archive=await Archive().ConfigureAwait(false);}catch(Exception error) {
-        var retained=previous.Sources??new List<CalendarSourceState>();var copied=retained.Select(s=>CopyCalendarSource(s,now,CalendarProblem(error))).ToList();
+      var streams=FetchStreams(previous,now);
+      List<Dictionary<string,object>> archive=null;Exception archiveError=null;
+      try{archive=await Archive().ConfigureAwait(false);}catch(Exception error){archiveError=error;}
+      var stream=await streams.ConfigureAwait(false);
+      if(archiveError!=null) {
+        var retained=previous.Sources??new List<CalendarSourceState>();var copied=retained.Select(s=>CopyCalendarSource(s,now,CalendarProblem(archiveError))).ToList();
+        if(stream!=null)copied=copied.Where(s=>s.Source!=OfficialLivestreams.Source).Concat(new[]{stream}).ToList();
         return CalendarFeedState.FromSources(copied,now,0,true);
       }
       var candidates=archive.Where(a=>IsOverviewTitle(Json.Str(a,"title"))).Take(3)
         .Concat(archive.Where(a=>GameEventDates.CalendarEligible(Json.Str(a,"title"))).Take(24))
         .Concat(archive.Where(a=>ArticleLanguage.MaintenanceTitle(Json.Str(a,"title"))).Take(5)).ToList();
-      foreach(var old in previous.Sources??new List<CalendarSourceState>())if((old.Events??new List<GameEvent>()).Any(e=>e!=null && (e.End(false)>now || e.End(true)>now || e.EuropeStartUnix>now.ToUnixTimeSeconds() || e.AsiaStartUnix>now.ToUnixTimeSeconds()))) {
+      foreach(var old in previous.Sources??new List<CalendarSourceState>())if(old.Source!=OfficialLivestreams.Source && (old.Events??new List<GameEvent>()).Any(e=>e!=null && (e.End(false)>now || e.End(true)>now || e.EuropeStartUnix>now.ToUnixTimeSeconds() || e.AsiaStartUnix>now.ToUnixTimeSeconds()))) {
         string cid=old.Source.Substring(old.Source.LastIndexOf('/')+1);var article=archive.FirstOrDefault(a=>Json.Str(a,"cid")==cid);if(article!=null)candidates.Add(article);
       }
       candidates=candidates.GroupBy(a=>Json.Str(a,"cid")).Select(g=>g.First()).Take(64).ToList();
@@ -91,8 +95,9 @@ namespace EndfieldWidget {
           await throttle.WaitAsync().ConfigureAwait(false);
           try{return await FetchCalendarSource(article,previous,now).ConfigureAwait(false);}finally{throttle.Release();}
         }).ToArray();
-        var sources=await Task.WhenAll(tasks).ConfigureAwait(false);
-        return CalendarFeedState.FromSources(sources,now,sources.Count(s=>s!=null && s.LastSuccess==now),sources.Length==0);
+        var sources=(await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
+        if(stream!=null)sources.Add(stream);
+        return CalendarFeedState.FromSources(sources,now,sources.Count(s=>s!=null && s.LastSuccess==now),sources.Count==0);
       }
     }
     static CalendarSourceState CopyCalendarSource(CalendarSourceState value,DateTimeOffset now,string problem) {

@@ -1,6 +1,6 @@
 # Endfield Widget
 
-A Windows desktop companion for **Arknights: Endfield**. Version **1.2.5**.
+A Windows desktop companion for **Arknights: Endfield**. Version **1.3.0**.
 
 View Sanity, upcoming events and official announcements without opening the game. The widget stays on the desktop, adapts its colors to the featured operator and displays event times in the Windows time zone.
 
@@ -46,7 +46,7 @@ Actual application views in English with sample account and event data. Click a 
 
 - SKPORT Sanity balance, progress and estimated full recovery time.
 - Automatic event, maintenance and debut banner dates from official announcements.
-- A calendar with search, filters, upcoming events and expandable descriptions.
+- A calendar with search, filters, upcoming events and expandable descriptions, including official version-preview livestreams.
 - Artwork for the current debut operator, with a matching color palette. Repeat banners do not replace it.
 - Normal, compact and micro layouts with independent scale and appearance settings.
 - Position locking, edge snapping, multiple monitors and desktop placement outside Alt+Tab.
@@ -56,7 +56,7 @@ Actual application views in English with sample account and event data. Click a 
 ## Download
 
 1. Open the [latest release](https://github.com/Sapientissimus/endfield-widget/releases/latest).
-2. Download `EndfieldWidget-Windows-v1.2.5.zip` and extract it to a permanent folder.
+2. Download `EndfieldWidget-Windows-v1.3.0.zip` and extract it to a permanent folder.
 3. Open `EndfieldWidget.exe`.
 4. Open **Settings** to select a language, choose the game server and connect a SKPORT account.
 
@@ -140,3 +140,7 @@ This is an unofficial companion and is not affiliated with the game's publishers
 ## Author
 
 Find me on [Patreon](https://www.patreon.com/Sapientissimus).
+
+## Release versions
+
+Public releases use semantic versioning: feature releases increase the minor version, and fixes increase the patch version. Intermediate local builds may be consolidated into one public release; skipped patch numbers are not missing downloads. Published release tags remain unchanged.

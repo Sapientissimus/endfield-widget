@@ -47,7 +47,7 @@ Actual application views in English with sample account and event data. Click a 
 - SKPORT Sanity balance, progress and estimated full recovery time.
 - Automatic event, maintenance and debut banner dates from official announcements.
 - A calendar with search, filters, upcoming events and expandable descriptions, including official version-preview livestreams.
-- Artwork for the current debut operator, with a matching color palette. Repeat banners do not replace it.
+- Artwork for the current debut operator, with a matching color palette.
 - Normal, compact and micro layouts with independent scale and appearance settings.
 - Position locking, edge snapping, multiple monitors and desktop placement outside Alt+Tab.
 - Automatic game discovery with Steam priority, a manual launch-path override, themed tray controls and optional Windows startup.
@@ -60,7 +60,7 @@ Actual application views in English with sample account and event data. Click a 
 3. Open `EndfieldWidget.exe`.
 4. Open **Settings** to select a language, choose the game server and connect a SKPORT account.
 
-Windows 10 or Windows 11 and .NET Framework 4.8 are required. The application is portable; no installer is needed. English is selected on first launch. The application remembers an explicitly selected language.
+Windows 10 or Windows 11 and .NET Framework 4.8 are required. The application is portable; no installer is needed. English is selected on first launch; your language choice is saved.
 
 Release executables are currently unsigned. Windows may display an unrecognized-app or unknown-publisher warning. `SHA256SUMS.txt` contains the EXE and ZIP hashes for checking download integrity.
 
@@ -70,14 +70,13 @@ Official dates are available without connecting an account. SKPORT is used to re
 
 - Drag the artwork area to move the widget. Use the context menu to lock its position.
 - Choose a layout from the context menu or settings. Each layout keeps its own scale and position.
-- **Play**, calendar, refresh and settings controls stay visible, including when the pointer is away. Only the close control appears on hover or keyboard focus. Play visibility can still be changed independently for each layout in Settings.
+- Play visibility can be configured separately for each layout in **Settings**. The close control appears on hover or keyboard focus.
 - Open the calendar from the widget or tray menu. Times follow the current Windows time zone, including daylight-saving changes.
 - Use the tray icon to restore a hidden widget. Launching the application again also shows its existing instance.
-- The tray menu follows the operator palette and appearance preset, with icons and a separate column for available global shortcuts. It supports arrow keys, Escape, display scaling and Windows High Contrast.
-- **Play** looks for Endfield in the registered Steam libraries first, then for the standalone game or official launcher. When both versions are installed, Steam is used. In **Settings → Game launch**, enter a full `.exe` path and choose **Save path**, or use **Browse…** to select it. **Use automatic detection** clears the override. An unavailable manual path is reported rather than silently launching another version.
-- Enable **Start with Windows** to start about 15 seconds after signing in. This creates a task for the current user without elevation or a stored password. Battery use and unavailable network connectivity do not block startup.
+- **Play** detects the installed game, preferring Steam when both versions are installed. To override detection, choose an `.exe` in **Settings → Game launch** and save the path. **Use automatic detection** clears the override.
+- Enable **Start with Windows** to launch the widget after signing in.
 
-Keep the portable folder in place after enabling startup. After moving it, switch startup off and on to register the new location. Turning startup off leaves the running widget open.
+Keep the portable folder in place after enabling startup. After moving it, switch startup off and on to register the new location.
 
 ## Languages and announcements
 
@@ -99,13 +98,13 @@ Keep the portable folder in place after enabling startup. After moving it, switc
 | 한국어 | Korean |
 | Українська | English |
 
-Event dates are parsed from the English edition and matched to translated official articles by article ID. Names, descriptions and source links follow the selected edition. Simplified Chinese uses script conversion of global Traditional Chinese articles to retain the global server schedule. Source links open the original official edition. Announcements are not machine-translated.
+Event names, descriptions and source links use the official edition listed above. Simplified Chinese is converted from the global Traditional Chinese edition. All editions use the global server schedule.
 
-Future dates are discovered automatically. The widget does not maintain a manual list of upcoming banner names or dates, and does not invent unannounced schedules. Cached data remains available when a source is temporarily unavailable; status messages indicate when an update could not be completed.
+Dates update automatically from official sources. Cached data remains available when a source is temporarily unavailable; the widget reports incomplete updates.
 
 ## Local data
 
-Settings and caches are stored separately in `%LOCALAPPDATA%\EndfieldWidget`. The saved account token is protected for the current Windows user using DPAPI. The source repository and release downloads contain no connected account or personal profile.
+Settings and caches are stored separately in `%LOCALAPPDATA%\EndfieldWidget`. The saved account token is protected for the current Windows user using DPAPI.
 
 Close the application from its tray menu before replacing the executable. Settings remain in the local profile folder. A diagnostic report can be exported from settings for troubleshooting; it excludes credentials and account identifiers.
 
@@ -140,7 +139,3 @@ This is an unofficial companion and is not affiliated with the game's publishers
 ## Author
 
 Find me on [Patreon](https://www.patreon.com/Sapientissimus).
-
-## Release versions
-
-Public releases use semantic versioning: feature releases increase the minor version, and fixes increase the patch version. Intermediate local builds may be consolidated into one public release; skipped patch numbers are not missing downloads. Published release tags remain unchanged.

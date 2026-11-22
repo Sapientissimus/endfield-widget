@@ -118,7 +118,7 @@ namespace EndfieldWidget {
           ??CalendarArtwork.Find(Json.Str(response,"data","cover"),html);
         var artworkTitle=Json.Str(response,"data","localizedTitle");
         if(string.IsNullOrWhiteSpace(artworkTitle))artworkTitle=title;
-        state.VersionUpdate=VersionUpdates.Parse(html,title,Json.Str(response,"data","canonicalTitle"),url,published);
+        state.VersionUpdate=VersionUpdates.Parse(html,title,Json.Str(response,"data","canonicalTitle"),url,published,Json.Str(response,"data","localizedTitle"));
         state.ArtworkTitle=string.IsNullOrWhiteSpace(artworkTitle)?null:artworkTitle.Substring(0,Math.Min(200,artworkTitle.Length));
         if(IsOverviewTitle(title) || ArticleLanguage.MaintenanceTitle(title)) {
           try{state.Maintenance=NewsClient.ParseSchedule(html,title,url,DateTimeOffset.FromUnixTimeSeconds(published));state.Maintenance.PublishedUnix=published;state.Maintenance.VersionIdentity=VersionUpdates.Identity(Json.Str(response,"data","canonicalTitle"))??VersionUpdates.Identity(title);}

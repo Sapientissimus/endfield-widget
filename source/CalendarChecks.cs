@@ -302,6 +302,7 @@ namespace EndfieldWidget {
   }
   sealed class CalendarBulletinFixture:HttpMessageHandler {
     readonly List<Dictionary<string,object>> articles=new List<Dictionary<string,object>>();readonly Dictionary<string,string> bodies=new Dictionary<string,string>();
+    public readonly Dictionary<string,string> LocalizedTitles=new Dictionary<string,string>();
     public readonly Dictionary<string,HttpStatusCode> Failures=new Dictionary<string,HttpStatusCode>();
     public int Requests,Pages,MissingPage,DelayMilliseconds;
     public void Add(string cid,string title,DateTimeOffset published,string html){articles.Add(new Dictionary<string,object>{{"cid",cid},{"title",title},{"displayTime",published.ToUnixTimeSeconds()}});bodies[cid]=html;}
@@ -316,7 +317,7 @@ namespace EndfieldWidget {
       }
       string cid=request.RequestUri.Segments.Last();HttpStatusCode status;if(Failures.TryGetValue(cid,out status))return Response(status,"unavailable");string html;
       var article=articles.FirstOrDefault(a=>Json.Str(a,"cid")==cid);
-      return bodies.TryGetValue(cid,out html)?Response(HttpStatusCode.OK,Json.Encode(new{code=0,data=new{data=html,title=article==null?"":Json.Str(article,"title")}})):Response(HttpStatusCode.NotFound,"missing");
+      return bodies.TryGetValue(cid,out html)?Response(HttpStatusCode.OK,Json.Encode(new{code=0,data=new{data=html,title=article==null?"":Json.Str(article,"title"),localizedTitle=LocalizedTitles.ContainsKey(cid)?LocalizedTitles[cid]:null}})):Response(HttpStatusCode.NotFound,"missing");
     }
     static HttpResponseMessage Response(HttpStatusCode status,string body){return new HttpResponseMessage(status){Content=new StringContent(body,Encoding.UTF8,"application/json")};}
   }

@@ -28,11 +28,31 @@ namespace EndfieldWidget {
         var localizedArticle=Json.Decode(File.ReadAllText(Path.Combine(folder,"localization","en-us-7011.json")).Replace("Meeting You in the World o'Shrooms","Встреча в мире грибов"));
         using(Publications.Enter(Publications.ForLanguage("ru"))) {
           var projected=LocalizedArticles.Project(actual,localizedArticle);
-          var localNotice=VersionUpdates.Parse(Json.Str(projected,"data","data"),Json.Str(projected,"data","title"),Json.Str(projected,"data","canonicalTitle"),NewsClient.NewsUrl+"/7011",published.ToUnixTimeSeconds());
+          var localNotice=VersionUpdates.Parse(Json.Str(projected,"data","data"),Json.Str(projected,"data","title"),Json.Str(projected,"data","canonicalTitle"),NewsClient.NewsUrl+"/7011",published.ToUnixTimeSeconds(),Json.Str(projected,"data","localizedTitle"));
           check(localNotice!=null && localNotice.Day==actualNotice.Day && localNotice.Identity==actualNotice.Identity && localNotice.Name=="Встреча в мире грибов","The official DEV Comm survives Russian name projection with its canonical version identity and unchanged date");
         }
 
 
+        const string canonicalName="Meeting You in the World o'Shrooms";
+        const string canonicalTitle="Arknights: Endfield ["+canonicalName+"] Version DEV Comm";
+        string canonicalHtml="<p>New version ["+canonicalName+"] will officially launch on Nov. 25, 2026.</p>";
+        var titleOnly=VersionUpdates.Parse(canonicalHtml,canonicalTitle,canonicalTitle,NewsClient.NewsUrl+"/7011",published.ToUnixTimeSeconds(),"Arknights: Endfield «Встреча в мире грибов» — заметки разработчиков");
+        check(titleOnly.Name=="Встреча в мире грибов" && titleOnly.Identity==CalendarData.Normalize(canonicalName),"A localized official title supplies the display name even when the body remains English");
+        foreach(var caption in new[]{"", "Developer communication", canonicalTitle}) {
+          var fallback=VersionUpdates.Parse(canonicalHtml,canonicalTitle,canonicalTitle,NewsClient.NewsUrl+"/7011",published.ToUnixTimeSeconds(),caption);
+          check(fallback.Name==canonicalName && fallback.Identity==titleOnly.Identity,"Missing or English official translation keeps the canonical display fallback: "+caption);
+        }
+        var renamed=VersionUpdates.Parse(canonicalHtml,canonicalTitle,canonicalTitle,NewsClient.NewsUrl+"/7011",published.ToUnixTimeSeconds(),"『アークナイツ：エンドフィールド』「キノコ菌グ！？君との大冒険！」バージョン開発通信");
+        check(renamed.Name=="キノコ菌グ！？君との大冒険！" && renamed.Identity==titleOnly.Identity,"Japanese title punctuation is supported without changing canonical version identity");
+        var localizedSource=new CalendarSourceState{Source=titleOnly.Source,VersionUpdate=titleOnly};
+        string previousTitleStorage=Storage.DirectoryPath;Storage.DirectoryPath=Path.Combine(folder,"version-title-cache");
+        try {
+          CalendarFeedStore.Save(CalendarFeedState.FromSources(new[]{localizedSource},published,1,false));
+          var restoredTitle=CalendarFeedStore.Load(null).Sources.Single().VersionUpdate;
+          check(restoredTitle.Name==titleOnly.Name && restoredTitle.Identity==titleOnly.Identity,"Localized display name and canonical identity both survive cache reload");
+          var full=new Schedule{Version="Other localized caption",VersionIdentity=titleOnly.Identity,Source=NewsClient.NewsUrl+"/7015",Start=published.AddDays(3),End=published.AddDays(3).AddHours(6)};
+          check(CalendarData.Entries(full,null,false,CalendarFeedState.FromSources(new[]{localizedSource},published,1,false)).Count==1,"A title-localized preliminary entry is still replaced by the canonical full maintenance schedule");
+        }finally{Storage.DirectoryPath=previousTitleStorage;}
         const string name="Meeting You in the World o'Shrooms";
         fixture.Add("7011","Arknights: Endfield ["+name+"] Version DEV Comm",published,"<p>Dear Endministrator,</p><p>Arknights: Endfield new version ["+name+"] will officially launch on Nov. 25, 2026.</p><p>Planned improvements follow.</p>");
         var feed=await new BannerClient(http).FetchCalendar(null);
@@ -52,6 +72,9 @@ namespace EndfieldWidget {
         }finally{Clock.ZoneOverride=savedZone;}
         string previous=Storage.DirectoryPath;Storage.DirectoryPath=Path.Combine(folder,"version-update-cache");
         try{CalendarFeedStore.Save(feed);var restored=CalendarFeedStore.Load(null);check(CalendarData.Entries(null,null,false,restored).Single().DateOnly==entry.DateOnly,"Date-only version notice survives cache reload");}finally{Storage.DirectoryPath=previous;}
+        fixture.LocalizedTitles["7011"]="Arknights: Endfield «Встреча в мире грибов» — заметки разработчиков";
+        feed=await new BannerClient(http).FetchCalendar(feed);
+        check(feed.Sources.Single().VersionUpdate.Name=="Встреча в мире грибов" && feed.Sources.Single().VersionUpdate.Identity==titleOnly.Identity,"Refreshing an existing English notice uses the selected edition title without changing its identity");
         fixture.Add("7014","["+name+"] Version Trailer",published.AddHours(1),"<p>New version ["+name+"] will officially launch on Nov. 25, 2026.</p>");
         var repeated=await new BannerClient(http).FetchCalendar(feed);
         check(CalendarData.Entries(null,null,false,repeated).Count==1,"Repeated announcements of one version are deduplicated by version identity");

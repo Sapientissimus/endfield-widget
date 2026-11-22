@@ -97,6 +97,7 @@ namespace EndfieldWidget {
       var data=(Dictionary<string,object>)((Dictionary<string,object>)canonical)["data"];
       data["calendarArtwork"]=CalendarArtwork.Find(Json.Str(localized,"data","cover"),Json.Str(localized,"data","data"))
         ??CalendarArtwork.Find(Json.Str(canonical,"data","cover"),Json.Str(canonical,"data","data"));
+      data["canonicalTitle"]=Json.Str(canonical,"data","title");
       data["title"]=replace(Json.Str(canonical,"data","title"));data["data"]=html.ToString();data["translatedParagraphs"]=translations;
       data["localizedTitle"]=Publications.DisplayText(Json.Str(localized,"data","title"));data["publicationCode"]=Publications.Current.Code;
       return canonical;

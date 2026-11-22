@@ -30,6 +30,8 @@ namespace EndfieldWidget {
       }));
     }
     async Task CheckCalendarUpgrade(Action<bool,string> check,string folder) {
+      await CheckDateOnlyVersionUpdates(check,folder);
+      CheckDateOnlyVersionView(check,folder);
       await CheckOfficialLivestreams(check,folder);
       await CheckExpandedPublication(check,folder);
       CheckCalendarDomain(check);

@@ -22,6 +22,7 @@ namespace EndfieldWidget {
     public bool Undated {get;set;}
     public List<GameEvent> Events {get;set;}
     public Schedule Maintenance {get;set;}
+    public VersionUpdateNotice VersionUpdate {get;set;}
     public List<string> WithdrawnNames {get;set;}
   }
   public sealed class CalendarFeedState {
@@ -53,7 +54,7 @@ namespace EndfieldWidget {
     static string Filename {get{return Publications.Cache("calendar");}}
     internal static bool Valid(CalendarFeedState value) {
       if(value==null || value.Schema!=CalendarFeedState.CurrentSchema || value.Sources==null || value.Sources.Count>96)return false;
-      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160 && (string.IsNullOrEmpty(e.ArtworkUrl) || e.Source==OfficialLivestreams.Source && e.Category==GameEventCategory.Livestream && OfficialLivestreams.IsThumbnail(e.ArtworkUrl,e.Identity)))) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
+      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160 && (string.IsNullOrEmpty(e.ArtworkUrl) || e.Source==OfficialLivestreams.Source && e.Category==GameEventCategory.Livestream && OfficialLivestreams.IsThumbnail(e.ArtworkUrl,e.Identity)))) && VersionUpdates.Valid(s.VersionUpdate,s.Source) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
     }
     static CalendarFeedState Read(string path) {
       try{if(new FileInfo(path).Length>4000000)return null;var state=new JavaScriptSerializer{MaxJsonLength=4000000}.Deserialize<CalendarFeedState>(File.ReadAllText(path,Encoding.UTF8));if(!Valid(state))return null;var restored=CalendarFeedState.FromSources(state.Sources,state.Checked,0,state.Partial);restored.PublicationCode=state.PublicationCode??Publications.Current.Code;return restored;}catch{return null;}
@@ -85,8 +86,9 @@ namespace EndfieldWidget {
       }
       var candidates=archive.Where(a=>IsOverviewTitle(Json.Str(a,"title"))).Take(3)
         .Concat(archive.Where(a=>GameEventDates.CalendarEligible(Json.Str(a,"title"))).Take(24))
+        .Concat(archive.Where(a=>VersionUpdates.Eligible(Json.Str(a,"title"))).Take(6))
         .Concat(archive.Where(a=>ArticleLanguage.MaintenanceTitle(Json.Str(a,"title"))).Take(5)).ToList();
-      foreach(var old in previous.Sources??new List<CalendarSourceState>())if(old.Source!=OfficialLivestreams.Source && (old.Events??new List<GameEvent>()).Any(e=>e!=null && (e.End(false)>now || e.End(true)>now || e.EuropeStartUnix>now.ToUnixTimeSeconds() || e.AsiaStartUnix>now.ToUnixTimeSeconds()))) {
+      foreach(var old in previous.Sources??new List<CalendarSourceState>())if(old.Source!=OfficialLivestreams.Source && (old.VersionUpdate!=null && old.VersionUpdate.Day.HasValue && old.VersionUpdate.Day.Value>=now.UtcDateTime.Date || (old.Events??new List<GameEvent>()).Any(e=>e!=null && (e.End(false)>now || e.End(true)>now || e.EuropeStartUnix>now.ToUnixTimeSeconds() || e.AsiaStartUnix>now.ToUnixTimeSeconds())))) {
         string cid=old.Source.Substring(old.Source.LastIndexOf('/')+1);var article=archive.FirstOrDefault(a=>Json.Str(a,"cid")==cid);if(article!=null)candidates.Add(article);
       }
       candidates=candidates.GroupBy(a=>Json.Str(a,"cid")).Select(g=>g.First()).Take(64).ToList();
@@ -101,7 +103,7 @@ namespace EndfieldWidget {
       }
     }
     static CalendarSourceState CopyCalendarSource(CalendarSourceState value,DateTimeOffset now,string problem) {
-      return new CalendarSourceState{Source=value.Source,ArtworkUrl=value.ArtworkUrl,ArtworkTitle=value.ArtworkTitle,IsVersionOverview=value.IsVersionOverview,Published=value.Published,LastSuccess=value.LastSuccess,LastAttempt=now,Problem=problem,Undated=value.Undated,Events=value.Events,Maintenance=value.Maintenance,WithdrawnNames=value.WithdrawnNames};
+      return new CalendarSourceState{Source=value.Source,ArtworkUrl=value.ArtworkUrl,ArtworkTitle=value.ArtworkTitle,IsVersionOverview=value.IsVersionOverview,Published=value.Published,LastSuccess=value.LastSuccess,LastAttempt=now,Problem=problem,Undated=value.Undated,Events=value.Events,Maintenance=value.Maintenance,VersionUpdate=value.VersionUpdate,WithdrawnNames=value.WithdrawnNames};
     }
     async Task<CalendarSourceState> FetchCalendarSource(Dictionary<string,object> article,CalendarFeedState previous,DateTimeOffset now) {
       string cid=Json.Str(article,"cid"),title=Json.Str(article,"title"),url=NewsClient.NewsUrl+"/"+cid;long published=Json.Num(article,"displayTime");
@@ -116,9 +118,10 @@ namespace EndfieldWidget {
           ??CalendarArtwork.Find(Json.Str(response,"data","cover"),html);
         var artworkTitle=Json.Str(response,"data","localizedTitle");
         if(string.IsNullOrWhiteSpace(artworkTitle))artworkTitle=title;
+        state.VersionUpdate=VersionUpdates.Parse(html,title,Json.Str(response,"data","canonicalTitle"),url,published);
         state.ArtworkTitle=string.IsNullOrWhiteSpace(artworkTitle)?null:artworkTitle.Substring(0,Math.Min(200,artworkTitle.Length));
         if(IsOverviewTitle(title) || ArticleLanguage.MaintenanceTitle(title)) {
-          try{state.Maintenance=NewsClient.ParseSchedule(html,title,url,DateTimeOffset.FromUnixTimeSeconds(published));state.Maintenance.PublishedUnix=published;}
+          try{state.Maintenance=NewsClient.ParseSchedule(html,title,url,DateTimeOffset.FromUnixTimeSeconds(published));state.Maintenance.PublishedUnix=published;state.Maintenance.VersionIdentity=VersionUpdates.Identity(Json.Str(response,"data","canonicalTitle"))??VersionUpdates.Identity(title);}
           catch(FormatException){if(Regex.IsMatch(text,@"Server[^\r\n]*UTC",RegexOptions.IgnoreCase))state.Problem="format";else{state.Maintenance=null;state.Undated=true;}}
         }
         if(IsOverviewTitle(title) || GameEventDates.CalendarEligible(title) || GameEventDates.CalendarEligible(archiveTitle)) {

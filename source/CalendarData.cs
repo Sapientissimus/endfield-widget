@@ -13,6 +13,7 @@ namespace EndfieldWidget {
     public string Id,Title,Name,Source;
     public CalendarKind Kind;
     public DateTimeOffset At;
+    public DateTime? DateOnly;
     public DateTimeOffset? End;
     public DateTimeOffset? PeriodStart,PeriodEnd;
     public long Published;
@@ -55,6 +56,11 @@ namespace EndfieldWidget {
       Action<CalendarEntry> add=entry=>{if(entry!=null)result.Add(entry);};
       var schedules=new List<Schedule>();if(schedule!=null)schedules.Add(schedule);if(feed!=null && feed.Schedules!=null)schedules.AddRange(feed.Schedules.Where(s=>s!=null));
       foreach(var item in schedules)add(Period(Entry(CalendarKind.Maintenance,"maintenance:"+Normalize(item.Version),item.Version,item.Source,item.Start,item.End,item.PublishedUnix>0?item.PublishedUnix:item.Checked.ToUnixTimeSeconds()),item.Start,item.End));
+      if(feed!=null && feed.Sources!=null)foreach(var notice in feed.Sources.Select(s=>s.VersionUpdate).Where(n=>n!=null && n.Day.HasValue).GroupBy(n=>n.Identity).Select(g=>g.OrderByDescending(n=>n.Published).First())) {
+        if(schedules.Any(s=>s.End>s.Start && (s.VersionIdentity??Normalize(s.Version))==notice.Identity))continue;
+        var entry=Entry(CalendarKind.Maintenance,"version-update:"+notice.Identity,notice.Name,notice.Source,new DateTimeOffset(notice.Day.Value,TimeSpan.Zero),null,notice.Published);
+        if(entry!=null){entry.DateOnly=notice.Day;entry.Title=L.T("Version update")+" · "+entry.Name;add(entry);}
+      }
       // Once available, the independent feed supersedes the saved banner snapshot.
       var records=feed!=null && feed.Schema==CalendarFeedState.CurrentSchema?feed.Events:banners==null?null:banners.GameEvents;
       var events=records==null?new List<GameEvent>():GameEventDates.Latest(records).Select(e=>e.WithMaintenanceEnd(schedules)).ToList();
@@ -85,10 +91,12 @@ namespace EndfieldWidget {
       }
       return Ordered(result.GroupBy(e=>e.Id,StringComparer.Ordinal).Select(g=>g.OrderByDescending(e=>e.Published).First())).ToList();
     }
+    public static DateTime Day(CalendarEntry entry){return entry.DateOnly??Clock.Local(entry.At).Date;}
+    public static bool Upcoming(CalendarEntry entry,DateTimeOffset now){return entry.DateOnly.HasValue?entry.DateOnly.Value>=Clock.Local(now).Date:entry.At>=now || entry.End.HasValue && entry.End.Value>now;}
     public static IOrderedEnumerable<CalendarEntry> Ordered(IEnumerable<CalendarEntry> entries){return entries.OrderBy(e=>e.At).ThenBy(e=>e.Kind).ThenBy(e=>e.Name??e.Title,StringComparer.OrdinalIgnoreCase).ThenBy(e=>e.Id,StringComparer.Ordinal);}
     public static IEnumerable<DateTime> GridDays(CalendarEntry entry) {
       if(entry==null || entry.At==DateTimeOffset.MinValue || entry.End.HasValue && entry.End<=entry.At)yield break;
-      var first=Clock.Local(entry.At).Date;
+      var first=Day(entry);
       yield return first;
       if(entry.End.HasValue) {
         var last=Clock.Local(entry.End.Value).Date;
@@ -98,11 +106,11 @@ namespace EndfieldWidget {
     public static bool Affects(CalendarEntry entry,DateTime day){return GridDays(entry).Contains(day.Date);}
     public static IEnumerable<CalendarEntry> OnDay(IEnumerable<CalendarEntry> entries,DateTime day){return entries.Where(e=>Affects(e,day));}
     public static DateTime? NearestDay(IEnumerable<CalendarEntry> entries,DateTimeOffset now) {
-      var next=Ordered(entries.Where(e=>e!=null && (e.At>=now || e.End.HasValue && e.End.Value>now))).OrderBy(e=>e.At<now?now:e.At).FirstOrDefault();
-      return next==null?(DateTime?)null:Clock.Local(next.At<now?now:next.At).Date;
+      var next=Ordered(entries.Where(e=>e!=null && Upcoming(e,now))).OrderBy(e=>e.At<now?now:e.At).FirstOrDefault();
+      return next==null?(DateTime?)null:next.DateOnly??Clock.Local(next.At<now?now:next.At).Date;
     }
     public static string Fingerprint(IEnumerable<CalendarEntry> entries) {
-      var text=string.Join("\n",entries.Select(e=>(e.Id??"")+"|"+e.Kind+"|"+e.Title+"|"+e.Source+"|"+e.At.UtcTicks+"|"+(e.End.HasValue?e.End.Value.UtcTicks:0)+"|"+(e.PeriodStart.HasValue?e.PeriodStart.Value.UtcTicks:0)+"|"+(e.PeriodEnd.HasValue?e.PeriodEnd.Value.UtcTicks:0)));
+      var text=string.Join("\n",entries.Select(e=>(e.Id??"")+"|"+e.Kind+"|"+e.Title+"|"+e.DateOnly+"|"+e.Source+"|"+e.At.UtcTicks+"|"+(e.End.HasValue?e.End.Value.UtcTicks:0)+"|"+(e.PeriodStart.HasValue?e.PeriodStart.Value.UtcTicks:0)+"|"+(e.PeriodEnd.HasValue?e.PeriodEnd.Value.UtcTicks:0)));
       using(var hash=SHA256.Create())return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(text)));
     }
     public static string ZoneKey(){var zone=Clock.ZoneOverride==null?TimeZoneInfo.Local:Clock.ZoneOverride();return zone.ToSerializedString();}
@@ -128,7 +136,7 @@ namespace EndfieldWidget {
     public DateTime? NearestDay(DateTimeOffset now){return CalendarData.NearestDay(entries,now);}
     public IEnumerable<CalendarEntry> Agenda(DateTimeOffset now,int dayCount) {
       var through=Clock.Local(now).Date.AddDays(dayCount);
-      return entries.Where(e=>(e.At>=now || e.End.HasValue && e.End>now) && Clock.Local(e.At).Date<through).OrderBy(e=>e.At<now?now:e.At).ThenBy(e=>e.Kind).ThenBy(e=>e.Id,StringComparer.Ordinal);
+      return entries.Where(e=>CalendarData.Upcoming(e,now) && CalendarData.Day(e)<through).OrderBy(e=>e.At<now?now:e.At).ThenBy(e=>e.Kind).ThenBy(e=>e.Id,StringComparer.Ordinal);
     }
     public static DateTime FirstDay(DateTime month){return new DateTime(month.Year,month.Month,1).AddDays(-(((int)new DateTime(month.Year,month.Month,1).DayOfWeek+6)%7));}
   }

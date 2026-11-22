@@ -37,6 +37,7 @@ namespace EndfieldWidget {
   }
 
   public class Schedule {
+    public string VersionIdentity {get;set;}
     public bool IsUpcomingOrInProgress(DateTimeOffset now) {
       return !string.IsNullOrWhiteSpace(Version) && Start!=DateTimeOffset.MinValue && End>Start && now<End;
     }

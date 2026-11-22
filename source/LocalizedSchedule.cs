@@ -11,7 +11,7 @@ namespace EndfieldWidget {
         string cid=Json.Str(article,"cid");var value=await Read(Api+"/"+cid+"?"+Query).ConfigureAwait(false);
         try {
           long published=Json.Num(article,"displayTime");
-          var schedule=NewsClient.ParseSchedule(Json.Str(value,"data","data"),FetchedTitle(value,article),NewsClient.NewsUrl+"/"+cid,DateTimeOffset.FromUnixTimeSeconds(published));schedule.PublishedUnix=published;
+          var schedule=NewsClient.ParseSchedule(Json.Str(value,"data","data"),FetchedTitle(value,article),NewsClient.NewsUrl+"/"+cid,DateTimeOffset.FromUnixTimeSeconds(published));schedule.PublishedUnix=published;schedule.VersionIdentity=VersionUpdates.Identity(Json.Str(value,"data","canonicalTitle"))??VersionUpdates.Identity(FetchedTitle(value,article));
           if(best==null || schedule.Start>best.Start)best=schedule;
         }catch(FormatException){}
       }

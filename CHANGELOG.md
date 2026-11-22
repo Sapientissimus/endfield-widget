@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Include version launch dates announced in official developer communications before a precise maintenance schedule is available.
+- Mark preliminary dates as having no announced time, and replace them with confirmed maintenance for the same version without duplicate calendar entries.
+
 ## 1.3.0
 
 - Discover scheduled version-preview livestreams from the official YouTube channel and display their start time in the Windows time zone.

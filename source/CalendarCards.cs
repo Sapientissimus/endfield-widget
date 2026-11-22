@@ -26,7 +26,7 @@ namespace EndfieldWidget {
     internal readonly CalendarEntry Entry;
     public string Id {get{return Entry.Id;}}
     public string Name {get{return CalendarData.DisplayName(Entry);}}
-    public string Category {get{return CalendarData.Label(Entry.Kind);}}
+    public string Category {get{return Entry.DateOnly.HasValue?L.T("Version update"):CalendarData.Label(Entry.Kind);}}
     public Brush CategoryBrush {get{return CalendarPresentation.BrushFor(Entry.Kind);}}
     public string Icon {get{return CalendarPresentation.Icon(Entry.Kind);}}
     public string TimeText {get;private set;}
@@ -53,9 +53,9 @@ namespace EndfieldWidget {
     internal CalendarCardModel(CalendarEntry entry,DateTimeOffset now,ICommand open,Func<CalendarEntry,CalendarDetailState> factory){Entry=entry;detailFactory=factory;OpenSource=new CalendarEntryCommand(open,entry);Refresh(now);}
     internal void Refresh(DateTimeOffset now) {
       string time=CalendarPresentation.Time(Entry),status=CalendarPresentation.Status(Entry,now);
-      string period=Entry.PeriodStart.HasValue && Entry.PeriodEnd.HasValue?Clock.Date(Entry.PeriodStart.Value)+L.T(" at ")+Clock.Time(Entry.PeriodStart.Value)+" — "+Clock.Date(Entry.PeriodEnd.Value)+L.T(" at ")+Clock.Time(Entry.PeriodEnd.Value):Clock.Date(Entry.At)+L.T(" at ")+Clock.Time(Entry.At);
+      string period=Entry.DateOnly.HasValue?L.DateCaption(Entry.DateOnly.Value,true)+" · "+L.T("Exact time not announced"):Entry.PeriodStart.HasValue && Entry.PeriodEnd.HasValue?Clock.Date(Entry.PeriodStart.Value)+L.T(" at ")+Clock.Time(Entry.PeriodStart.Value)+" — "+Clock.Date(Entry.PeriodEnd.Value)+L.T(" at ")+Clock.Time(Entry.PeriodEnd.Value):Clock.Date(Entry.At)+L.T(" at ")+Clock.Time(Entry.At);
       if(PeriodText!=period){PeriodText=period;Changed("PeriodText");}
-      DateTime date=Clock.Local(Entry.At<now && Entry.End.HasValue && Entry.End>now?now:Entry.At).Date;
+      DateTime date=Entry.DateOnly??Clock.Local(Entry.At<now && Entry.End.HasValue && Entry.End>now?now:Entry.At).Date;
       string heading=CalendarPresentation.Heading(date,Clock.Local(now).Date);
       if(TimeText!=time){TimeText=time;Changed("TimeText");Changed("AccessibleName");}
       if(Status!=status){Status=status;Changed("Status");}if(DateHeading!=heading){DateHeading=heading;Changed("DateHeading");}
@@ -85,12 +85,14 @@ namespace EndfieldWidget {
       string title=day.ToString("dddd",culture)+", "+date;return char.ToUpper(title[0],culture)+title.Substring(1);
     }
     public static string Time(CalendarEntry entry) {
+      if(entry.DateOnly.HasValue)return L.T("Exact time not announced");
       var end=entry.RangeEnd;
       if(!end.HasValue)return Clock.Time(entry.At);
       if(Clock.Local(entry.At).Date==Clock.Local(end.Value).Date)return Clock.Time(entry.At)+"–"+Clock.Time(end.Value);
       return Clock.Date(entry.At)+" · "+Clock.Time(entry.At)+" → "+Clock.Date(end.Value)+" · "+Clock.Time(end.Value);
     }
     public static string Status(CalendarEntry entry,DateTimeOffset now) {
+      if(entry.DateOnly.HasValue)return "";
       bool deadline=CalendarData.IsEnd(entry.Kind);
       var end=entry.RangeEnd;
       bool missingEnd=(entry.Kind==CalendarKind.Debut || entry.Kind==CalendarKind.EventStart || entry.Kind==CalendarKind.RerunStart || entry.Kind==CalendarKind.WeaponStart) && !end.HasValue;

@@ -4,6 +4,46 @@ using System.Linq;
 using System.Net.Http;
 namespace EndfieldWidget {
   partial class Widget {
+    static async System.Threading.Tasks.Task CheckPreDownloadNotice(Action<bool,string> check,string folder) {
+      var canonical=File.ReadAllText(Path.Combine(folder,"localization","en-us-3835.json"));
+      var translated=File.ReadAllText(Path.Combine(folder,"localization","ru-ru-3835.json"));
+      var published=DateTimeOffset.FromUnixTimeSeconds(1795406400);
+      using(Publications.Enter(Publications.ForLanguage("ru"))) {
+        var projected=LocalizedArticles.Project(Json.Decode(canonical),Json.Decode(translated));
+        check(Json.Str(projected,"data","title").Contains("Встретимся в грибном краю"),"A complete line-break-packed maintenance article retains its official localized version name");
+        var schedule=NewsClient.ParseSchedule(Json.Str(projected,"data","data"),Json.Str(projected,"data","title"),NewsClient.NewsUrl+"/3835",published);
+        check(schedule.Start==new DateTimeOffset(2026,11,24,22,0,0,TimeSpan.Zero) && schedule.End==new DateTimeOffset(2026,11,25,4,0,0,TimeSpan.Zero),"The real November pre-download notice yields exact maintenance UTC times");
+        var broken=Json.Decode(translated);((System.Collections.Generic.Dictionary<string,object>)((System.Collections.Generic.Dictionary<string,object>)broken)["data"])["data"]="<p>Incomplete translation<br>One short line</p>";
+        bool refused=false;try{LocalizedArticles.Project(Json.Decode(canonical),broken);}catch(FormatException){refused=true;}
+        check(refused,"An actually incomplete translation is still rejected when the canonical article uses line breaks");
+        using(var fixture=new PreDownloadNoticeFixture(canonical,translated))using(var http=new HttpClient(fixture)) {
+          var client=new BannerClient(http);var precise=await client.FetchSchedule();
+          var feed=await client.FetchCalendar(null);
+          check(!feed.Partial && feed.Schedules.Count==1 && precise.Start==schedule.Start && precise.VersionIdentity=="meeting you in the world o'shrooms","Production fetch/projection accepts the real localized notice and preserves canonical maintenance identity");
+          var notice=new VersionUpdateNotice{Name="Meeting You in the World o'Shrooms",Identity=precise.VersionIdentity,Source=NewsClient.NewsUrl+"/7011",Date="2026-11-25",Published=published.AddDays(-1).ToUnixTimeSeconds()};
+          feed.Sources.Add(new CalendarSourceState{Source=notice.Source,VersionUpdate=notice});
+          var entries=CalendarData.Entries(precise,null,false,feed);
+          check(entries.Count==1 && !entries[0].DateOnly.HasValue && entries[0].Name=="Встретимся в грибном краю","The confirmed localized maintenance replaces an English preliminary notice without duplicates");
+        }
+      }
+    }
+
+    void CheckPreDownloadNoticeView(Action<bool,string> check,string folder) {
+      var oldSchedule=schedule;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldNow=calendarNow;var oldMask=calendarFilterMask;var oldQuery=calendarQuery;var oldLanguage=L.Code;var oldZone=Clock.ZoneOverride;
+      try {
+        L.Set("en");Clock.ZoneOverride=()=>TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");
+        var now=new DateTimeOffset(2026,11,23,10,0,0,TimeSpan.Zero);calendarNow=()=>now;bannerState=null;calendarQuery="";calendarFilterMask=CalendarData.AllKinds;calendarRemembered=false;
+        var article=Json.Decode(File.ReadAllText(Path.Combine(folder,"localization","en-us-3835.json")));
+        string title=Json.Str(article,"data","title"),source=NewsClient.NewsUrl+"/3835";
+        schedule=NewsClient.ParseSchedule(Json.Str(article,"data","data"),title,source,now);schedule.VersionIdentity=VersionUpdates.Identity(title);
+        var preliminary=new VersionUpdateNotice{Name=schedule.Version,Identity=schedule.VersionIdentity,Source=NewsClient.NewsUrl+"/7011",Date="2026-11-25",Published=now.AddDays(-1).ToUnixTimeSeconds()};
+        calendarFeed=CalendarFeedState.FromSources(new[]{new CalendarSourceState{Source=preliminary.Source,VersionUpdate=preliminary},new CalendarSourceState{Source=source,Maintenance=schedule}},now,2,false);
+        ShowCalendar();SelectCalendarDay(new DateTime(2026,11,25));calendarDialog.UpdateLayout();
+        check(calendarDayModels.Count==1 && calendarAgendaModels.Count==1 && calendarDayModels[0].TimeText=="00:00–06:00" && !calendarDayModels[0].Entry.DateOnly.HasValue,"The rendered Kyiv calendar shows one confirmed November25 maintenance card at00:00–06:00, replacing the preliminary notice");
+        SaveImage(calendarDialog,Path.Combine(folder,"maintenance-notice-en.png"));
+      }finally{if(calendarDialog!=null)calendarDialog.Close();schedule=oldSchedule;calendarFeed=oldFeed;bannerState=oldBanners;calendarNow=oldNow;calendarFilterMask=oldMask;calendarQuery=oldQuery;Clock.ZoneOverride=oldZone;L.Set(oldLanguage);calendarRemembered=false;calendarSnapshot=null;calendarRecords=null;}
+    }
+
     void CheckDateOnlyVersionView(Action<bool,string> check,string folder) {
       var oldSchedule=schedule;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldNow=calendarNow;var oldMask=calendarFilterMask;var oldQuery=calendarQuery;var oldLanguage=L.Code;var oldZone=Clock.ZoneOverride;
       try {
@@ -92,4 +132,17 @@ namespace EndfieldWidget {
       }
     }
   }
+  sealed class PreDownloadNoticeFixture:System.Net.Http.HttpMessageHandler {
+    readonly string canonical,localized;
+    public PreDownloadNoticeFixture(string en,string ru){canonical=en;localized=ru;}
+    protected override System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage> SendAsync(System.Net.Http.HttpRequestMessage request,System.Threading.CancellationToken cancellation) {
+      string body;
+      if(request.RequestUri.AbsolutePath.EndsWith("/api/bulletin")) {
+        var item=Json.At(Json.Decode(canonical),"data");body=Json.Encode(new{code=0,data=new{total=1,list=new[]{item}}});
+      } else if(request.RequestUri.AbsolutePath.EndsWith("/3835"))body=request.RequestUri.Query.Contains("lang=ru-ru")?localized:canonical;
+      else return System.Threading.Tasks.Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.NotFound){Content=new System.Net.Http.StringContent("")});
+      return System.Threading.Tasks.Task.FromResult(new System.Net.Http.HttpResponseMessage(System.Net.HttpStatusCode.OK){Content=new System.Net.Http.StringContent(body,System.Text.Encoding.UTF8,"application/json")});
+    }
+  }
+
 }

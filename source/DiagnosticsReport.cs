@@ -18,7 +18,7 @@ using System.Text.RegularExpressions;
 namespace EndfieldWidget {
   static class BuildInfo {
     public const string Version="1.3.1";
-    public const string Build="14";
+    public const string Build="15";
     static string hash;
     public static string Hash(){if(hash==null)try{using(var stream=File.OpenRead(Assembly.GetExecutingAssembly().Location))using(var sha=SHA256.Create())hash=BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","");}catch{hash="unavailable";}return hash;}
   }

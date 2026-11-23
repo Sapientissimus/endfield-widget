@@ -2,6 +2,8 @@
 
 ## 1.3.1
 
+- Read complete official maintenance announcements formatted as a single paragraph with line breaks, including their localized version names.
+
 - Use the selected official article language for version update names, with English as a fallback when no translation is available.
 
 - Include version launch dates announced in official developer communications before a precise maintenance schedule is available.

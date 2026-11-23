@@ -25,6 +25,8 @@ namespace EndfieldWidget {
       var matches=Regex.Matches(html??"",@"<p\b[^>]*>(.*?)</p>",RegexOptions.Singleline|RegexOptions.IgnoreCase);
       var lines=matches.Cast<Match>().Select(m=>NewsClient.PlainText(m.Groups[1].Value).Trim()).Where(t=>t.Length>0).ToList();
       if(lines.Count==0)lines=NewsClient.PlainText(html??"").Split('\n').Select(t=>t.Trim()).Where(t=>t.Length>0).ToList();
+      // Some complete official notices use one paragraph with <br> for every logical row.
+      if(lines.Count<3)lines=lines.SelectMany(t=>t.Split('\n')).Select(t=>t.Trim()).Where(t=>t.Length>0).ToList();
       if(lines.Count>1200)throw new FormatException("The official article has too many paragraphs.");return lines.Select(t=>new Paragraph(t)).ToList();
     }
     static double Cost(Paragraph a,Paragraph b) {

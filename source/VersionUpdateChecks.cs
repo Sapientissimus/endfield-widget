@@ -13,6 +13,9 @@ namespace EndfieldWidget {
         check(Json.Str(projected,"data","title").Contains("Встретимся в грибном краю"),"A complete line-break-packed maintenance article retains its official localized version name");
         var schedule=NewsClient.ParseSchedule(Json.Str(projected,"data","data"),Json.Str(projected,"data","title"),NewsClient.NewsUrl+"/3835",published);
         check(schedule.Start==new DateTimeOffset(2026,11,24,22,0,0,TimeSpan.Zero) && schedule.End==new DateTimeOffset(2026,11,25,4,0,0,TimeSpan.Zero),"The real November pre-download notice yields exact maintenance UTC times");
+        var asiaHtml=System.Text.RegularExpressions.Regex.Replace(Json.Str(Json.Decode(canonical),"data","data"),@"Americas / Europe Server:[^<]+","");
+        var asiaSchedule=NewsClient.ParseSchedule(asiaHtml,Json.Str(Json.Decode(canonical),"data","title"),NewsClient.NewsUrl+"/3835",published);
+        check(asiaSchedule.Start==schedule.Start && asiaSchedule.End==schedule.End,"The real Asia06:00–12:00 UTC+8 and Europe17:00–23:00 UTC-5 maintenance windows resolve to the same global interval");
         var broken=Json.Decode(translated);((System.Collections.Generic.Dictionary<string,object>)((System.Collections.Generic.Dictionary<string,object>)broken)["data"])["data"]="<p>Incomplete translation<br>One short line</p>";
         bool refused=false;try{LocalizedArticles.Project(Json.Decode(canonical),broken);}catch(FormatException){refused=true;}
         check(refused,"An actually incomplete translation is still rejected when the canonical article uses line breaks");
@@ -24,6 +27,15 @@ namespace EndfieldWidget {
           feed.Sources.Add(new CalendarSourceState{Source=notice.Source,VersionUpdate=notice});
           var entries=CalendarData.Entries(precise,null,false,feed);
           check(entries.Count==1 && !entries[0].DateOnly.HasValue && entries[0].Name=="Встретимся в грибном краю","The confirmed localized maintenance replaces an English preliminary notice without duplicates");
+          var asiaEntries=CalendarData.Entries(precise,null,true,feed);
+          check(asiaEntries.Count==1 && asiaEntries[0].At==entries[0].At && asiaEntries[0].End==entries[0].End,"Selecting Asia preserves the globally simultaneous maintenance and still removes the preliminary duplicate");
+          var zone=Clock.ZoneOverride;
+          try {
+            Clock.ZoneOverride=()=>TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+            check(CalendarPresentation.Time(asiaEntries[0])=="06:00–12:00","An Asia Windows time zone displays the published Asia maintenance hours");
+            Clock.ZoneOverride=()=>TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");
+            check(CalendarPresentation.Time(asiaEntries[0])=="00:00–06:00","Asia server selection keeps maintenance converted to the user's Kyiv Windows time zone");
+          } finally {Clock.ZoneOverride=zone;}
         }
       }
     }

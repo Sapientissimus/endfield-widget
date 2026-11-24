@@ -38,6 +38,7 @@ namespace EndfieldWidget {
     }
     public void FeatureTest(string reportPath) {
       var previousZone=Clock.ZoneOverride;var fixtureZone=TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");Clock.ZoneOverride=()=>fixtureZone;
+      var previousDisplays = displayOverride;
       window.Show();window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(async()=>{
         var publicationFixture=Publications.NativeFixture("ru-ru");
         var report=new List<string>();Window dialog=null;
@@ -72,6 +73,14 @@ namespace EndfieldWidget {
           check(Placement.Snap(new Rect(-2540,22,420,710),screenB)==new Point(-2548,12),"Snap respects top and left edges on a negative-coordinate monitor");
           check(Placement.Snap(new Rect(1494,320,420,710),screenA)==new Point(1488,318),"Snap respects right and bottom work-area margins");
           check(Placement.Snap(new Rect(800,150,420,710),screenA)==new Point(800,150),"Moving through the interior does not snap unexpectedly");
+          // The layout assertions below exercise a widget that fits at its requested scale.
+          // Use the same desktop geometry on a hosted runner and a developer machine.
+          var primaryDisplay = new List<DisplayArea> { screenA };
+          displayOverride = primaryDisplay;
+          config.MonitorId = screenA.Id;
+          config.MonitorX = .1;
+          config.MonitorY = .05;
+          ApplyLayout(true);
           DemoReading();
           CheckMenuInput(check);
           CheckUpdateBlocks(check,folder);
@@ -82,7 +91,7 @@ namespace EndfieldWidget {
           check(window.Left>=0 && config.MonitorId==screenB.Id,"Monitor fallback moves the window without overwriting the saved preference");
           displayOverride=new List<DisplayArea>{screenA,screenB};ApplyLayout(true);window.UpdateLayout();
           check(window.Left<0,"The same WPF window returns when its preferred monitor reappears");
-          displayOverride=null;config.MonitorId=Placement.Displays().First(s=>s.Primary).Id;config.MonitorX=.7;config.MonitorY=.2;ApplyLayout(true);window.UpdateLayout();
+          displayOverride=primaryDisplay;config.MonitorId=screenA.Id;config.MonitorX=.7;config.MonitorY=.2;ApplyLayout(true);window.UpdateLayout();
           window.Left=-10000;window.Top=-10000;
           check(Find<Button>("CloseButton").Opacity==0 && !Find<Button>("CloseButton").IsHitTestVisible,"Chrome is hidden and cannot intercept clicks while the pointer is away");
           SaveImage(window,Path.Combine(folder,"widget-full.png"));
@@ -98,7 +107,7 @@ namespace EndfieldWidget {
           ((Slider)dialog.FindName("ScaleSlider")).Value=75;window.UpdateLayout();
           check(Math.Abs(window.Width-315)<.1 && Math.Abs(config.Scale-.75)<.001,"The scale slider resizes the entire widget to 75 percent");
           ((Slider)dialog.FindName("ScaleSlider")).Value=130;window.UpdateLayout();
-          check(window.Width>420 && window.Height<=Placement.Displays().First(s=>s.Primary).Work.Height,"Large scale stays inside the available work area");
+          check(window.Width>420 && window.Height*PixelScale().Y<=screenA.Work.Height,"Large scale stays inside the available work area");
           ((Slider)dialog.FindName("ScaleSlider")).Value=100;
           ((Slider)dialog.FindName("OpacitySlider")).Value=60;
           check(((SolidColorBrush)window.Resources["WidgetBackgroundBrush"]).Color.A==153 && ((SolidColorBrush)window.Resources["ThemeTextBrush"]).Color.A==255,"Opacity changes the background while text stays opaque");
@@ -155,7 +164,7 @@ namespace EndfieldWidget {
           check(UserStartupRegistration.Command(@"C:\Program Files\Endfield Widget\EndfieldWidget.exe")=="\"C:\\Program Files\\Endfield Widget\\EndfieldWidget.exe\"","Startup commands preserve paths containing spaces");
           report.Add("ALL FEATURE CHECKS PASSED. Multi-monitor topology changes are simulated; no physical screens, real startup keys, user account, clipboard, or Windows notifications were modified.");
         }catch(Exception error){report.Add("FAILED: "+error.ToString());Environment.ExitCode=1;}
-        finally{if(dialog!=null)dialog.Close();Clock.ZoneOverride=previousZone;publicationFixture.Dispose();File.WriteAllLines(reportPath,report,Encoding.UTF8);Exit();}
+        finally{if(dialog!=null)dialog.Close();displayOverride=previousDisplays;Clock.ZoneOverride=previousZone;publicationFixture.Dispose();File.WriteAllLines(reportPath,report,Encoding.UTF8);Exit();}
       }));
     }
     void CheckUpdateBlocks(Action<bool,string> check,string folder) {
@@ -170,7 +179,8 @@ namespace EndfieldWidget {
         double top=window.Top,left=window.Left,shownHeight=Find<Grid>("WidgetLayout").Height,removedHeight=Find<RowDefinition>("FullUpdateRow").ActualHeight;
         schedule.End=now.AddSeconds(-1);Paint();window.UpdateLayout();
         check(Find<Border>("FullUpdateCard").Visibility==Visibility.Collapsed && Find<RowDefinition>("FullUpdateRow").ActualHeight==0 && Math.Abs(Find<Grid>("WidgetLayout").Height-(shownHeight-removedHeight))<1,"A finished update removes exactly its measured row and gap from the full widget height");
-        check(Math.Abs(window.Top-top)<1 && Math.Abs(window.Left-left)<1,"Automatic hiding keeps the widget at the same desktop position");
+        check(Math.Abs(window.Top-top)<1 && Math.Abs(window.Left-left)<1, string.Format(CultureInfo.InvariantCulture,
+          "Automatic hiding keeps the widget at the same desktop position ({0:F2}, {1:F2} to {2:F2}, {3:F2})", left, top, window.Left, window.Top));
         check(!schedule.IsUpcomingOrInProgress(schedule.End),"The card is hidden at the exact planned end time");
         SaveImage(window,Path.Combine(folder,"widget-no-update.png"));
         config.Compact=true;ApplyLayout(true);window.UpdateLayout();

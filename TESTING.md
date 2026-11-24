@@ -4,6 +4,10 @@ Tests run on isolated profiles with synthetic credentials and saved public offic
 
 ## Build and interface checks
 
+Every push to `testing` runs the catalog and application checks on Windows. The tested executable is available for seven days in the [Actions run for that commit](https://github.com/Sapientissimus/endfield-widget/actions?query=branch%3Atesting). Its download name includes the version and build number. Use `-Desktop` locally for the additional interactive desktop checks.
+
+Increment `BuildInfo.Build` for each new test binary. When publishing an approved build, copy its version and build number from the run summary into the release notes.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Catalog-Test.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test.ps1 -Desktop

@@ -30,6 +30,8 @@ namespace EndfieldWidget {
       }));
     }
     async Task CheckCalendarUpgrade(Action<bool,string> check,string folder) {
+      await CheckUnreadableMaintenance(check,folder);
+      CheckUnreadableMaintenanceView(check,folder);
       await CheckPreDownloadNotice(check,folder);
       CheckPreDownloadNoticeView(check,folder);
       await CheckDateOnlyVersionUpdates(check,folder);

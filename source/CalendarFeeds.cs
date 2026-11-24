@@ -22,6 +22,8 @@ namespace EndfieldWidget {
     public bool Undated {get;set;}
     public List<GameEvent> Events {get;set;}
     public Schedule Maintenance {get;set;}
+    public string MaintenanceIdentity {get;set;}
+    public bool MaintenanceUnreadable {get;set;}
     public VersionUpdateNotice VersionUpdate {get;set;}
     public List<string> WithdrawnNames {get;set;}
   }
@@ -54,7 +56,7 @@ namespace EndfieldWidget {
     static string Filename {get{return Publications.Cache("calendar");}}
     internal static bool Valid(CalendarFeedState value) {
       if(value==null || value.Schema!=CalendarFeedState.CurrentSchema || value.Sources==null || value.Sources.Count>96)return false;
-      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160 && (string.IsNullOrEmpty(e.ArtworkUrl) || e.Source==OfficialLivestreams.Source && e.Category==GameEventCategory.Livestream && OfficialLivestreams.IsThumbnail(e.ArtworkUrl,e.Identity)))) && VersionUpdates.Valid(s.VersionUpdate,s.Source) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
+      return value.Sources.All(s=>s!=null && CalendarData.Official(s.Source) && (string.IsNullOrEmpty(s.ArtworkUrl) || CalendarArtwork.IsOfficial(s.ArtworkUrl)) && (s.Events==null || s.Events.Count<=128 && s.Events.All(e=>e!=null && e.Source==s.Source && !string.IsNullOrWhiteSpace(e.Name) && e.Name.Length<=160 && (string.IsNullOrEmpty(e.ArtworkUrl) || e.Source==OfficialLivestreams.Source && e.Category==GameEventCategory.Livestream && OfficialLivestreams.IsThumbnail(e.ArtworkUrl,e.Identity)))) && (s.MaintenanceIdentity==null || s.MaintenanceIdentity.Length>0 && s.MaintenanceIdentity.Length<=200) && (!s.MaintenanceUnreadable || !string.IsNullOrWhiteSpace(s.MaintenanceIdentity)) && VersionUpdates.Valid(s.VersionUpdate,s.Source) && (s.Maintenance==null || s.Maintenance.Source==s.Source && s.Maintenance.End>s.Maintenance.Start && s.Maintenance.End-s.Maintenance.Start<=TimeSpan.FromDays(3)));
     }
     static CalendarFeedState Read(string path) {
       try{if(new FileInfo(path).Length>4000000)return null;var state=new JavaScriptSerializer{MaxJsonLength=4000000}.Deserialize<CalendarFeedState>(File.ReadAllText(path,Encoding.UTF8));if(!Valid(state))return null;var restored=CalendarFeedState.FromSources(state.Sources,state.Checked,0,state.Partial);restored.PublicationCode=state.PublicationCode??Publications.Current.Code;return restored;}catch{return null;}
@@ -72,6 +74,12 @@ namespace EndfieldWidget {
   }
   partial class BannerClient {
     static string CalendarProblem(Exception error){var bulletin=error as BulletinException;return bulletin!=null?bulletin.Problem:error is OperationCanceledException?"timeout":error is HttpRequestException?"network":error is FormatException?"format":"source";}
+    static bool MaintenanceTimingPending(string text) {
+      const string subject=@"(?:The\s+)?(?:version\s+)?maintenance\s+(?:time|hours|schedule|period)|(?:The\s+)?(?:time|hours|schedule|period)\s+(?:for|of)\s+(?:the\s+)?(?:version\s+)?maintenance";
+      const string pending=@"TBA|to\s+be\s+announced|(?:will\s+be\s+)?announced\s+(?:later|separately)|not\s+(?:yet\s+)?announced|has\s+not\s+(?:yet\s+)?been\s+announced";
+      return Regex.IsMatch(text??"",@"^\s*(?:[·•]\s*|▼\s*//\s*)?(?:"+subject+@")\s*:?\s*(?:(?:is|are)\s+)?(?:"+pending+@")\b",
+        RegexOptions.Multiline|RegexOptions.IgnoreCase|RegexOptions.CultureInvariant);
+    }
     public async Task<CalendarFeedState> FetchCalendar(CalendarFeedState previous) {return await InPublication(()=>FetchCalendarCore(previous)).ConfigureAwait(false);}
     public async Task<CalendarFeedState> FetchCalendarCore(CalendarFeedState previous) {
       var now=DateTimeOffset.UtcNow;previous=previous??CalendarFeedState.Seed(null);
@@ -103,17 +111,21 @@ namespace EndfieldWidget {
       }
     }
     static CalendarSourceState CopyCalendarSource(CalendarSourceState value,DateTimeOffset now,string problem) {
-      return new CalendarSourceState{Source=value.Source,ArtworkUrl=value.ArtworkUrl,ArtworkTitle=value.ArtworkTitle,IsVersionOverview=value.IsVersionOverview,Published=value.Published,LastSuccess=value.LastSuccess,LastAttempt=now,Problem=problem,Undated=value.Undated,Events=value.Events,Maintenance=value.Maintenance,VersionUpdate=value.VersionUpdate,WithdrawnNames=value.WithdrawnNames};
+      return new CalendarSourceState{Source=value.Source,ArtworkUrl=value.ArtworkUrl,ArtworkTitle=value.ArtworkTitle,IsVersionOverview=value.IsVersionOverview,Published=value.Published,LastSuccess=value.LastSuccess,LastAttempt=now,Problem=problem,Undated=value.Undated,Events=value.Events,Maintenance=value.Maintenance,MaintenanceIdentity=value.MaintenanceIdentity,MaintenanceUnreadable=value.MaintenanceUnreadable,VersionUpdate=value.VersionUpdate,WithdrawnNames=value.WithdrawnNames};
     }
     async Task<CalendarSourceState> FetchCalendarSource(Dictionary<string,object> article,CalendarFeedState previous,DateTimeOffset now) {
       string cid=Json.Str(article,"cid"),title=Json.Str(article,"title"),url=NewsClient.NewsUrl+"/"+cid;long published=Json.Num(article,"displayTime");
       var old=(previous.Sources??new List<CalendarSourceState>()).FirstOrDefault(s=>s.Source==url)??new CalendarSourceState{Source=url,Events=new List<GameEvent>()};
       var state=CopyCalendarSource(old,now,null);state.Published=published;state.Undated=false;
       string archiveTitle=title;
+      bool maintenanceNotice=ArticleLanguage.MaintenanceTitle(title);
+      state.MaintenanceIdentity=maintenanceNotice?VersionUpdates.Identity(ArticleLanguage.Title(title)):null;
+      state.MaintenanceUnreadable=false;
       try {
         var response=await Read(Api+"/"+cid+"?"+Query).ConfigureAwait(false);string html=Json.Str(response,"data","data"),text=NewsClient.StructuredText(html);title=FetchedTitle(response,article);
         if(string.IsNullOrWhiteSpace(text))throw new FormatException("Empty official article.");
         state.IsVersionOverview=IsOverviewTitle(title);
+        if(maintenanceNotice)state.MaintenanceIdentity=VersionUpdates.Identity(Json.Str(response,"data","canonicalTitle"))??VersionUpdates.Identity(ArticleLanguage.Title(title))??state.MaintenanceIdentity;
         state.ArtworkUrl=CalendarArtwork.Find(Json.Str(response,"data","calendarArtwork"),null)
           ??CalendarArtwork.Find(Json.Str(response,"data","cover"),html);
         var artworkTitle=Json.Str(response,"data","localizedTitle");
@@ -121,8 +133,25 @@ namespace EndfieldWidget {
         state.VersionUpdate=VersionUpdates.Parse(html,title,Json.Str(response,"data","canonicalTitle"),url,published,Json.Str(response,"data","localizedTitle"));
         state.ArtworkTitle=string.IsNullOrWhiteSpace(artworkTitle)?null:artworkTitle.Substring(0,Math.Min(200,artworkTitle.Length));
         if(IsOverviewTitle(title) || ArticleLanguage.MaintenanceTitle(title)) {
-          try{state.Maintenance=NewsClient.ParseSchedule(html,title,url,DateTimeOffset.FromUnixTimeSeconds(published));state.Maintenance.PublishedUnix=published;state.Maintenance.VersionIdentity=VersionUpdates.Identity(Json.Str(response,"data","canonicalTitle"))??VersionUpdates.Identity(title);}
-          catch(FormatException){if(Regex.IsMatch(text,@"Server[^\r\n]*UTC",RegexOptions.IgnoreCase))state.Problem="format";else{state.Maintenance=null;state.Undated=true;}}
+          try {
+            state.Maintenance=NewsClient.ParseSchedule(html,title,url,DateTimeOffset.FromUnixTimeSeconds(published));
+            state.Maintenance.PublishedUnix=published;
+            state.Maintenance.VersionIdentity=VersionUpdates.Identity(Json.Str(response,"data","canonicalTitle"))??VersionUpdates.Identity(title);
+          } catch(FormatException) {
+            if(maintenanceNotice && MaintenanceTimingPending(text)) {
+              // An explicit pending timetable is valid information, not a parser failure.
+              // Retain any previously verified precise schedule from this article.
+              state.Undated=state.Maintenance==null;
+            } else if(maintenanceNotice && !string.IsNullOrWhiteSpace(state.MaintenanceIdentity)) {
+              state.MaintenanceUnreadable=true;
+              state.Problem="format";
+            } else if(Regex.IsMatch(text,@"Server[^\r\n]*UTC",RegexOptions.IgnoreCase)) {
+              state.Problem="format";
+            } else {
+              state.Maintenance=null;
+              state.Undated=true;
+            }
+          }
         }
         if(IsOverviewTitle(title) || GameEventDates.CalendarEligible(title) || GameEventDates.CalendarEligible(archiveTitle)) {
           try {
@@ -132,7 +161,10 @@ namespace EndfieldWidget {
           }catch(FormatException){state.Problem="format";}
         }
         if(state.Problem==null)state.LastSuccess=now;
-      }catch(Exception error){state.Problem=CalendarProblem(error);}
+      } catch(Exception error) {
+        state.Problem=CalendarProblem(error);
+        state.MaintenanceUnreadable=maintenanceNotice && !string.IsNullOrWhiteSpace(state.MaintenanceIdentity);
+      }
       return state;
     }
   }

@@ -2,6 +2,13 @@
 
 ## 1.3.1
 
+**Build 16**
+
+- Show the build number in Settings under About.
+- Link to the official maintenance notice when the calendar has a preliminary date but cannot read the published schedule.
+
+**Earlier builds**
+
 - Read complete official maintenance announcements formatted as a single paragraph with line breaks, including their localized version names.
 
 - Use the selected official article language for version update names, with English as a fallback when no translation is available.

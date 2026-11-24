@@ -1,4 +1,5 @@
 {
+  "{0} (build {1})": "{0} (빌드 {1})",
   "Version update": "버전 업데이트",
   "Exact time not announced": "정확한 시간 미정",
   "Version preview livestream": "신규 버전 프리뷰 방송",
@@ -359,5 +360,6 @@
   "The saved game path is unavailable. Choose another executable in Settings.": "저장된 게임 경로를 사용할 수 없습니다. 설정에서 다른 실행 파일을 선택해 주세요.",
   "Game not found. Install Endfield or choose its path in Settings.": "게임을 찾을 수 없습니다. Endfield를 설치하거나 설정에서 경로를 지정해 주세요.",
   "Could not launch the game. Check its path in Settings and try again.": "게임을 실행하지 못했습니다. 설정에서 경로를 확인한 후 다시 시도해 주세요.",
-  "Launch Endfield": "Endfield 실행"
+  "Launch Endfield": "Endfield 실행",
+  "Could not read the maintenance schedule": "점검 일정을 읽을 수 없습니다"
 }

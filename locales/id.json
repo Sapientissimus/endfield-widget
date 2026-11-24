@@ -1,4 +1,5 @@
 {
+  "{0} (build {1})": "{0} (build {1})",
   "Version update": "Pembaruan versi",
   "Exact time not announced": "Waktu pasti belum diumumkan",
   "Version preview livestream": "Siaran langsung pratinjau versi",
@@ -359,5 +360,6 @@
   "The saved game path is unavailable. Choose another executable in Settings.": "Lokasi game tersimpan tidak tersedia. Pilih berkas lain di Pengaturan.",
   "Game not found. Install Endfield or choose its path in Settings.": "Game tidak ditemukan. Instal Endfield atau tentukan lokasinya di Pengaturan.",
   "Could not launch the game. Check its path in Settings and try again.": "Game tidak dapat dijalankan. Periksa lokasinya di Pengaturan dan coba lagi.",
-  "Launch Endfield": "Jalankan Endfield"
+  "Launch Endfield": "Jalankan Endfield",
+  "Could not read the maintenance schedule": "Jadwal pemeliharaan tidak dapat dibaca"
 }

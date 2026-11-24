@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,11 @@ namespace EndfieldWidget {
         string folder=Path.GetDirectoryName(Path.GetFullPath(reportPath));
         try {
           check(Storage.Isolated && startup is MemoryStartupRegistration && accountToken.Length==0,"Release checks use an isolated profile, no account and no real startup backend");
-          check(BuildInfo.Version=="1.3.1" && BuildInfo.Build=="15","User-facing version matches release 1.3.1");
+          var executable = FileVersionInfo.GetVersionInfo(typeof(BuildInfo).Assembly.Location);
+          check(executable.ProductVersion == BuildInfo.Version
+            && executable.FileVersion == BuildInfo.Version + "." + BuildInfo.Build
+            && executable.FilePrivatePart > 0,
+            "The tested executable identifies the same version and build as the widget");
           check(L.Code=="en" && config.InterfaceLanguage=="en" && L.Languages[0].Code=="en","A fresh installation starts in English and lists English first");
           check(L.Normalize(null)=="en" && L.Normalize("../../outside")=="en" && L.Normalize("uk")=="uk","Missing/invalid choices safely fall back to English; explicit supported choices remain valid");
           check(L.Catalog("en").Count>=335 && L.Catalog("en").Keys.All(k=>!Regex.IsMatch(k,@"[\u0400-\u04ff]")),"All message keys use the English base catalog");
@@ -30,8 +35,17 @@ namespace EndfieldWidget {
           check(((ComboBox)settingsDialog.FindName("LanguageSelector")).Items.Count==15,"All fifteen languages remain available without a preferred regional variant");
           check(((CheckBox)settingsDialog.FindName("StartupSwitch")).IsChecked==false,"A fresh installation leaves Windows startup disabled");
           SaveImage(settingsDialog,Path.Combine(folder,"release-settings.png"));
+          var versionLabel = (TextBlock)settingsDialog.FindName("BuildVersionLabel");
+          check(versionLabel.Text == "Endfield " + BuildInfo.Version + " (build " + BuildInfo.Build + ")",
+            "About displays the version and build of the running executable");
+          ((ScrollViewer)settingsDialog.FindName("SettingsScroll")).ScrollToBottom();
+          await settingsDialog.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
+          SaveImage(settingsDialog, Path.Combine(folder, "release-about.png"));
           ChangeInterfaceLanguage("uk",settingsDialog);await window.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
           check(L.T("Paste your login token.")=="Вставте токен входу.","The login message follows the selected translation");
+          versionLabel = (TextBlock)settingsDialog.FindName("BuildVersionLabel");
+          check(versionLabel.Text == "Endfield " + BuildInfo.Version + " (збірка " + BuildInfo.Build + ")",
+            "Switching to Ukrainian also localizes the visible build label");
           foreach(string code in new[]{"fr","es-419","pt-BR","it","id","vi","th","ja","ko","zh-Hans","zh-Hant"})check(L.Catalog(code).Count==L.Catalog("en").Count,"Complete release catalog: "+code);
           ChangeInterfaceLanguage("en",settingsDialog);await window.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ContextIdle);
           var saved=Storage.Read<Config>("settings.json");check(saved!=null && saved.InterfaceLanguage=="en" && string.IsNullOrEmpty(saved.ProtectedToken),"Language selection persists without adding an account to the release");

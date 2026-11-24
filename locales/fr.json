@@ -1,4 +1,5 @@
 {
+  "{0} (build {1})": "{0} (compilation {1})",
   "Version update": "Mise à jour de version",
   "Exact time not announced": "Heure exacte non annoncée",
   "Version preview livestream": "Diffusion de présentation de version",
@@ -359,5 +360,6 @@
   "The saved game path is unavailable. Choose another executable in Settings.": "Le chemin enregistré est indisponible. Sélectionnez un autre exécutable dans les paramètres.",
   "Game not found. Install Endfield or choose its path in Settings.": "Jeu introuvable. Installez Endfield ou indiquez son chemin dans les paramètres.",
   "Could not launch the game. Check its path in Settings and try again.": "Impossible de lancer le jeu. Vérifiez son chemin dans les paramètres et réessayez.",
-  "Launch Endfield": "Lancer Endfield"
+  "Launch Endfield": "Lancer Endfield",
+  "Could not read the maintenance schedule": "Impossible de lire le calendrier de maintenance"
 }

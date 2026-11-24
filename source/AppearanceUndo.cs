@@ -56,7 +56,10 @@ namespace EndfieldWidget {
       var root=(StackPanel)dialog.FindName("SettingsSections");
       var card=RegisterControl(dialog,"AboutSettingsCard",new Border{CornerRadius=new CornerRadius(11),BorderThickness=new Thickness(1),Padding=new Thickness(16)});card.SetResourceReference(Border.BackgroundProperty,"ThemeCardBrush");card.SetResourceReference(Border.BorderBrushProperty,"ThemeBorderBrush");
       var about=new StackPanel();card.Child=about;root.Children.Add(card);var title=SettingsLabel(L.T("About"));title.FontSize=16;title.FontWeight=FontWeights.SemiBold;about.Children.Add(title);
-      var version=RegisterControl(dialog,"BuildVersionLabel",SettingsLabel("Endfield  "+BuildInfo.Version));version.Margin=new Thickness(0,10,0,0);about.Children.Add(version);
+      var version = SettingsLabel("Endfield " + L.Format("{0} (build {1})", BuildInfo.Version, BuildInfo.Build));
+      RegisterControl(dialog, "BuildVersionLabel", version);
+      version.Margin = new Thickness(0, 10, 0, 0);
+      about.Children.Add(version);
       var save=RegisterControl(dialog,"SaveReportButton",new Button{Content=L.T("Save report"),HorizontalAlignment=HorizontalAlignment.Left,Padding=new Thickness(11,8,11,8),FontSize=11,Margin=new Thickness(0,10,0,0)});about.Children.Add(save);
       var status=RegisterControl(dialog,"ReportFeedback",SettingsLabel(""));status.FontSize=10;status.TextWrapping=TextWrapping.Wrap;status.Margin=new Thickness(0,6,0,0);about.Children.Add(status);
       save.Click+=(s,e)=>{try{status.Text=ExportDiagnosticReport(dialog)?L.T("Report saved."):"";}catch{status.Text=L.T("Could not save the report. Try another folder.");}};

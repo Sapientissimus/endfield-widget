@@ -53,7 +53,15 @@ namespace EndfieldWidget {
     internal CalendarCardModel(CalendarEntry entry,DateTimeOffset now,ICommand open,Func<CalendarEntry,CalendarDetailState> factory){Entry=entry;detailFactory=factory;OpenSource=new CalendarEntryCommand(open,entry);Refresh(now);}
     internal void Refresh(DateTimeOffset now) {
       string time=CalendarPresentation.Time(Entry),status=CalendarPresentation.Status(Entry,now);
-      string period=Entry.DateOnly.HasValue?L.DateCaption(Entry.DateOnly.Value,true)+" · "+L.T("Exact time not announced"):Entry.PeriodStart.HasValue && Entry.PeriodEnd.HasValue?Clock.Date(Entry.PeriodStart.Value)+L.T(" at ")+Clock.Time(Entry.PeriodStart.Value)+" — "+Clock.Date(Entry.PeriodEnd.Value)+L.T(" at ")+Clock.Time(Entry.PeriodEnd.Value):Clock.Date(Entry.At)+L.T(" at ")+Clock.Time(Entry.At);
+      string period;
+      if(Entry.DateOnly.HasValue) {
+        period=L.DateCaption(Entry.DateOnly.Value,true)+" · "+time;
+      } else if(Entry.PeriodStart.HasValue && Entry.PeriodEnd.HasValue) {
+        period=Clock.Date(Entry.PeriodStart.Value)+L.T(" at ")+Clock.Time(Entry.PeriodStart.Value)
+          +" — "+Clock.Date(Entry.PeriodEnd.Value)+L.T(" at ")+Clock.Time(Entry.PeriodEnd.Value);
+      } else {
+        period=Clock.Date(Entry.At)+L.T(" at ")+Clock.Time(Entry.At);
+      }
       if(PeriodText!=period){PeriodText=period;Changed("PeriodText");}
       DateTime date=Entry.DateOnly??Clock.Local(Entry.At<now && Entry.End.HasValue && Entry.End>now?now:Entry.At).Date;
       string heading=CalendarPresentation.Heading(date,Clock.Local(now).Date);
@@ -85,7 +93,7 @@ namespace EndfieldWidget {
       string title=day.ToString("dddd",culture)+", "+date;return char.ToUpper(title[0],culture)+title.Substring(1);
     }
     public static string Time(CalendarEntry entry) {
-      if(entry.DateOnly.HasValue)return L.T("Exact time not announced");
+      if(entry.DateOnly.HasValue)return L.T(entry.MaintenanceUnreadable?"Could not read the maintenance schedule":"Exact time not announced");
       var end=entry.RangeEnd;
       if(!end.HasValue)return Clock.Time(entry.At);
       if(Clock.Local(entry.At).Date==Clock.Local(end.Value).Date)return Clock.Time(entry.At)+"–"+Clock.Time(end.Value);

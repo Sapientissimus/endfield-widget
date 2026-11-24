@@ -14,6 +14,7 @@ namespace EndfieldWidget {
     public CalendarKind Kind;
     public DateTimeOffset At;
     public DateTime? DateOnly;
+    public bool MaintenanceUnreadable;
     public DateTimeOffset? End;
     public DateTimeOffset? PeriodStart,PeriodEnd;
     public long Published;
@@ -59,7 +60,20 @@ namespace EndfieldWidget {
       if(feed!=null && feed.Sources!=null)foreach(var notice in feed.Sources.Select(s=>s.VersionUpdate).Where(n=>n!=null && n.Day.HasValue).GroupBy(n=>n.Identity).Select(g=>g.OrderByDescending(n=>n.Published).First())) {
         if(schedules.Any(s=>s.End>s.Start && (s.VersionIdentity??Normalize(s.Version))==notice.Identity))continue;
         var entry=Entry(CalendarKind.Maintenance,"version-update:"+notice.Identity,notice.Name,notice.Source,new DateTimeOffset(notice.Day.Value,TimeSpan.Zero),null,notice.Published);
-        if(entry!=null){entry.DateOnly=notice.Day;entry.Title=L.T("Version update")+" · "+entry.Name;add(entry);}
+        if(entry!=null) {
+          entry.DateOnly=notice.Day;
+          entry.Title=L.T("Version update")+" · "+entry.Name;
+          var maintenanceNotice=feed.Sources
+            .Where(s=>s.MaintenanceIdentity==notice.Identity && s.Published>=notice.Published)
+            .OrderByDescending(s=>s.Published)
+            .FirstOrDefault();
+          if(maintenanceNotice!=null && maintenanceNotice.MaintenanceUnreadable) {
+            entry.MaintenanceUnreadable=true;
+            entry.Source=maintenanceNotice.Source;
+            entry.Published=Math.Max(entry.Published,maintenanceNotice.Published);
+          }
+          add(entry);
+        }
       }
       // Once available, the independent feed supersedes the saved banner snapshot.
       var records=feed!=null && feed.Schema==CalendarFeedState.CurrentSchema?feed.Events:banners==null?null:banners.GameEvents;
@@ -110,7 +124,7 @@ namespace EndfieldWidget {
       return next==null?(DateTime?)null:next.DateOnly??Clock.Local(next.At<now?now:next.At).Date;
     }
     public static string Fingerprint(IEnumerable<CalendarEntry> entries) {
-      var text=string.Join("\n",entries.Select(e=>(e.Id??"")+"|"+e.Kind+"|"+e.Title+"|"+e.DateOnly+"|"+e.Source+"|"+e.At.UtcTicks+"|"+(e.End.HasValue?e.End.Value.UtcTicks:0)+"|"+(e.PeriodStart.HasValue?e.PeriodStart.Value.UtcTicks:0)+"|"+(e.PeriodEnd.HasValue?e.PeriodEnd.Value.UtcTicks:0)));
+      var text=string.Join("\n",entries.Select(e=>(e.Id??"")+"|"+e.Kind+"|"+e.Title+"|"+e.DateOnly+"|"+e.MaintenanceUnreadable+"|"+e.Source+"|"+e.At.UtcTicks+"|"+(e.End.HasValue?e.End.Value.UtcTicks:0)+"|"+(e.PeriodStart.HasValue?e.PeriodStart.Value.UtcTicks:0)+"|"+(e.PeriodEnd.HasValue?e.PeriodEnd.Value.UtcTicks:0)));
       using(var hash=SHA256.Create())return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(text)));
     }
     public static string ZoneKey(){var zone=Clock.ZoneOverride==null?TimeZoneInfo.Local:Clock.ZoneOverride();return zone.ToSerializedString();}

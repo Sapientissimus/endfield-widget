@@ -1,0 +1,48 @@
+name: Testing build
+
+on:
+  push:
+    branches: [testing]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Build and test the widget
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check translation catalogs
+        shell: pwsh
+        run: ./scripts/Catalog-Test.ps1
+
+      - name: Build and run application checks
+        shell: pwsh
+        run: ./scripts/Test.ps1
+
+      - name: Identify the tested executable
+        id: binary
+        shell: pwsh
+        run: |
+          $binary = Get-Item -LiteralPath EndfieldWidget.exe
+          $version = $binary.VersionInfo.ProductVersion
+          $build = $binary.VersionInfo.FilePrivatePart
+          $digest = (Get-FileHash -LiteralPath $binary.FullName -Algorithm SHA256).Hash
+          "label=$version-build-$build" >> $env:GITHUB_OUTPUT
+          $summary = "Endfield Widget $version (build $build) · EXE SHA-256 $digest"
+          Write-Output $summary
+          $summary >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload the tested executable
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: EndfieldWidget-${{ steps.binary.outputs.label }}-testing
+          path: EndfieldWidget.exe
+          if-no-files-found: error
+          retention-days: 7

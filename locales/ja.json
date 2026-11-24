@@ -1,4 +1,5 @@
 {
+  "{0} (build {1})": "{0}（ビルド {1}）",
   "Version update": "バージョンアップデート",
   "Exact time not announced": "正確な時刻は未発表",
   "Version preview livestream": "新バージョンプレビュー配信",
@@ -359,5 +360,6 @@
   "The saved game path is unavailable. Choose another executable in Settings.": "保存したゲームのパスを利用できません。設定で別の実行ファイルを選択してください。",
   "Game not found. Install Endfield or choose its path in Settings.": "ゲームが見つかりません。Endfield をインストールするか、設定でパスを指定してください。",
   "Could not launch the game. Check its path in Settings and try again.": "ゲームを起動できませんでした。設定でパスを確認して、もう一度お試しください。",
-  "Launch Endfield": "Endfield を起動"
+  "Launch Endfield": "Endfield を起動",
+  "Could not read the maintenance schedule": "メンテナンス日程を読み取れませんでした"
 }

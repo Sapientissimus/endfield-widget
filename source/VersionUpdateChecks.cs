@@ -4,6 +4,136 @@ using System.Linq;
 using System.Net.Http;
 namespace EndfieldWidget {
   partial class Widget {
+    static async System.Threading.Tasks.Task CheckUnreadableMaintenance(Action<bool,string> check,string folder) {
+      using(Publications.NativeFixture("en-us"))
+      using(var fixture=new CalendarBulletinFixture())
+      using(var http=new HttpClient(fixture)) {
+        var publication=new DateTimeOffset(2026,11,22,2,30,0,TimeSpan.Zero);
+        const string name="Meeting You in the World o'Shrooms";
+        string maintenanceTitle="["+name+"] Version Pre-Download & Update Notice";
+        string announcement=NewsClient.NewsUrl+"/3835";
+        string unknownTime=L.T("Exact time not announced");
+        string unreadableTime=L.T("Could not read the maintenance schedule");
+        fixture.Add("7011","Arknights: Endfield ["+name+"] Version DEV Comm",publication,
+          "<p>New version ["+name+"] will officially launch on Nov. 25, 2026.</p>");
+        var feed=await new BannerClient(http).FetchCalendar(null);
+        var untouched=CalendarData.Entries(null,null,false,feed).Single();
+        check(CalendarPresentation.Time(untouched)==unknownTime,
+          "A date-only launch remains unannounced before an official maintenance notice exists");
+
+        fixture.Add("3835",maintenanceTitle,publication.AddDays(1),
+          "<p>The official maintenance schedule uses an unfamiliar layout.</p>");
+        feed=await new BannerClient(http).FetchCalendar(feed);
+        foreach(bool asia in new[]{false,true}) {
+          var entry=CalendarData.Entries(null,null,asia,feed).Single();
+          check(entry.DateOnly==new DateTime(2026,11,25)
+            && CalendarPresentation.Time(entry)==unreadableTime
+            && CalendarData.SourceUrl(entry)==announcement,
+            "An unreadable maintenance notice labels the same preliminary date and links to that announcement without duplicates for "+(asia?"Asia":"Europe"));
+        }
+        var previous=Storage.DirectoryPath;
+        Storage.DirectoryPath=Path.Combine(folder,"unreadable-maintenance-cache");
+        try {
+          CalendarFeedStore.Save(feed);
+          feed=CalendarFeedStore.Load(null);
+          var entry=CalendarData.Entries(null,null,false,feed).Single();
+          check(CalendarPresentation.Time(entry)==unreadableTime && entry.Source==announcement,
+            "The version-specific unreadable schedule and new source link survive cache reload");
+        } finally {Storage.DirectoryPath=previous;}
+        var selected=L.Code;
+        try {
+          L.Set("uk");
+          check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,feed).Single())=="Не вдалося прочитати розклад",
+            "The unreadable schedule state follows the selected interface language");
+        } finally {L.Set(selected);}
+
+        fixture.Failures["3835"]=System.Net.HttpStatusCode.ServiceUnavailable;
+        var unavailable=await new BannerClient(http).FetchCalendar(feed);
+        check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,unavailable).Single())==unreadableTime,
+          "An unavailable identified maintenance notice still links its existing preliminary date to the official notice");
+        fixture.Failures.Remove("3835");
+
+        foreach(string pending in new[]{
+          "<p>Maintenance hours: TBA</p>",
+          "<p>The maintenance schedule will be announced later.</p>",
+          "<p>▼// Version Maintenance Time</p><p>To be announced</p>"}) {
+          fixture.SetBody("3835",pending);
+          feed=await new BannerClient(http).FetchCalendar(feed);
+          foreach(bool asia in new[]{false,true}) {
+            var entry=CalendarData.Entries(null,null,asia,feed).Single();
+            check(!feed.Partial && entry.DateOnly.HasValue && CalendarPresentation.Time(entry)==unknownTime,
+              "An explicitly pending maintenance timetable remains unannounced instead of unreadable for "+(asia?"Asia":"Europe")+": "+pending);
+          }
+        }
+        fixture.SetBody("3835","<p>Reward distribution: TBA.</p><p>The maintenance schedule uses an unfamiliar layout.</p>");
+        feed=await new BannerClient(http).FetchCalendar(feed);
+        check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,feed).Single())==unreadableTime,
+          "TBA for unrelated rewards cannot hide an unreadable maintenance timetable");
+        fixture.Add("3834",maintenanceTitle,publication.AddDays(2),"<p>Maintenance time: TBA.</p>");
+        var newerPending=await new BannerClient(http).FetchCalendar(feed);
+        check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,newerPending).Single())==unknownTime,
+          "A newer explicitly pending timetable supersedes an older unreadable announcement of the same version");
+        fixture.Remove("3834");
+
+        fixture.SetBody("3835","<p>Americas / Europe Server: Nov. 24, 2026 at 17:00 – Nov. 24, 2026 at 23:00 (UTC-5)</p>");
+        feed=await new BannerClient(http).FetchCalendar(feed);
+        foreach(bool asia in new[]{false,true}) {
+          var entry=CalendarData.Entries(null,null,asia,feed).Single();
+          check(!entry.DateOnly.HasValue && entry.Source==announcement && CalendarPresentation.Time(entry)!=unreadableTime,
+            "A successful retry replaces the unreadable date with one confirmed maintenance for "+(asia?"Asia":"Europe"));
+        }
+        fixture.SetBody("3835","<p>Maintenance hours: TBA.</p>");
+        var pendingPrecise=await new BannerClient(http).FetchCalendar(feed);
+        check(!CalendarData.Entries(null,null,false,pendingPrecise).Single().DateOnly.HasValue,
+          "Pending wording never erases previously verified precise maintenance hours");
+        fixture.SetBody("3835","<p>The schedule format changed temporarily.</p>");
+        var unreadablePrecise=await new BannerClient(http).FetchCalendar(feed);
+        check(!CalendarData.Entries(null,null,false,unreadablePrecise).Single().DateOnly.HasValue,
+          "A temporary format failure never downgrades cached verified maintenance to a preliminary date");
+        fixture.Failures["3835"]=System.Net.HttpStatusCode.ServiceUnavailable;
+        var retained=await new BannerClient(http).FetchCalendar(feed);
+        check(!CalendarData.Entries(null,null,false,retained).Single().DateOnly.HasValue,
+          "A transient failure keeps a previously verified precise schedule");
+
+        fixture.Remove("3835");
+        var withdrawn=await new BannerClient(http).FetchCalendar(unavailable);
+        check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,withdrawn).Single())==unknownTime,
+          "A withdrawn maintenance announcement no longer marks the preliminary date unreadable");
+        fixture.Add("3838",maintenanceTitle,publication.AddDays(-10),"<p>An old unreadable notice of the same name.</p>");
+        var older=await new BannerClient(http).FetchCalendar(null);
+        check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,older).Single())==unknownTime,
+          "An older notice with the same title cannot mark a newly announced version date unreadable");
+        fixture.Remove("3838");
+        fixture.Add("3839","["+name+"] Version Update Notes",publication.AddDays(1),"<p>An unrelated version overview.</p>");
+        fixture.Failures["3839"]=System.Net.HttpStatusCode.ServiceUnavailable;
+        fixture.Add("3836","[Different Version] Version Pre-Download & Update Notice",publication.AddDays(1),"<p>Unreadable unrelated maintenance.</p>");
+        fixture.Add("3837","[Another Event] Fun & Games Event Details",publication.AddDays(1),"<p>No event dates.</p>");
+        fixture.Failures["3837"]=System.Net.HttpStatusCode.ServiceUnavailable;
+        var unrelated=await new BannerClient(http).FetchCalendar(null);
+        check(CalendarPresentation.Time(CalendarData.Entries(null,null,false,unrelated).Single())==unknownTime,
+          "Failures of another version or an unrelated event never mark this version's schedule unreadable");
+      }
+    }
+
+    void CheckUnreadableMaintenanceView(Action<bool,string> check,string folder) {
+      var oldSchedule=schedule;var oldFeed=calendarFeed;var oldBanners=bannerState;var oldNow=calendarNow;var oldMask=calendarFilterMask;var oldQuery=calendarQuery;var oldLanguage=L.Code;var oldZone=Clock.ZoneOverride;var oldRegion=config.BannerRegion;var oldOpen=calendarOpenOverride;
+      try {
+        L.Set("en");Clock.ZoneOverride=()=>TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");
+        var now=new DateTimeOffset(2026,11,23,10,0,0,TimeSpan.Zero);calendarNow=()=>now;schedule=null;bannerState=null;calendarQuery="";calendarFilterMask=CalendarData.AllKinds;calendarRemembered=false;
+        const string name="Meeting You in the World o'Shrooms";string identity=CalendarData.Normalize(name),source=NewsClient.NewsUrl+"/3835";
+        var preliminary=new VersionUpdateNotice{Name=name,Identity=identity,Source=NewsClient.NewsUrl+"/7011",Date="2026-11-25",Published=now.AddDays(-1).ToUnixTimeSeconds()};
+        calendarFeed=CalendarFeedState.FromSources(new[]{new CalendarSourceState{Source=preliminary.Source,VersionUpdate=preliminary},new CalendarSourceState{Source=source,MaintenanceIdentity=identity,MaintenanceUnreadable=true,Published=now.ToUnixTimeSeconds(),Problem="format"}},now,1,true);
+        ShowCalendar();SelectCalendarDay(new DateTime(2026,11,25));calendarDialog.UpdateLayout();
+        check(calendarDayModels.Count==1 && calendarAgendaModels.Count==1 && calendarDayModels[0].TimeText=="Could not read the maintenance schedule" && calendarDayModels[0].PeriodText.Contains("Could not read the maintenance schedule"),"The rendered preliminary-date card directly shows the unreadable schedule instead of claiming no time was announced");
+        string opened=null;calendarOpenOverride=url=>opened=url;
+        calendarDayModels[0].OpenSource.Execute(null);
+        check(opened==source && calendarDayModels[0].Source==source && CalendarDetailsData.Key(calendarDayModels[0].Entry).StartsWith(source+"|"),"The announcement action and details cache target the new maintenance announcement, not the old DEV Comm");
+        config.BannerRegion="Asia";calendarQuery="World o'Shrooms";RenderCalendar();
+        check(calendarDayModels.Count==1 && calendarAgendaModels.Count==1 && calendarDayModels[0].Source==source,"Version-name search and the Asia setting retain the single unreadable maintenance card with its new source");
+        SaveImage(calendarDialog,Path.Combine(folder,"unreadable-maintenance-en.png"));
+      }finally{calendarOpenOverride=oldOpen;if(calendarDialog!=null)calendarDialog.Close();schedule=oldSchedule;calendarFeed=oldFeed;bannerState=oldBanners;calendarNow=oldNow;calendarFilterMask=oldMask;calendarQuery=oldQuery;Clock.ZoneOverride=oldZone;config.BannerRegion=oldRegion;L.Set(oldLanguage);calendarRemembered=false;calendarSnapshot=null;calendarRecords=null;}
+    }
+
     static async System.Threading.Tasks.Task CheckPreDownloadNotice(Action<bool,string> check,string folder) {
       var canonical=File.ReadAllText(Path.Combine(folder,"localization","en-us-3835.json"));
       var translated=File.ReadAllText(Path.Combine(folder,"localization","ru-ru-3835.json"));
@@ -16,6 +146,20 @@ namespace EndfieldWidget {
         var asiaHtml=System.Text.RegularExpressions.Regex.Replace(Json.Str(Json.Decode(canonical),"data","data"),@"Americas / Europe Server:[^<]+","");
         var asiaSchedule=NewsClient.ParseSchedule(asiaHtml,Json.Str(Json.Decode(canonical),"data","title"),NewsClient.NewsUrl+"/3835",published);
         check(asiaSchedule.Start==schedule.Start && asiaSchedule.End==schedule.End,"The real Asia06:00–12:00 UTC+8 and Europe17:00–23:00 UTC-5 maintenance windows resolve to the same global interval");
+        var pendingCanonical=Json.Decode(canonical);
+        var pendingLocalized=Json.Decode(translated);
+        var canonicalData=(System.Collections.Generic.Dictionary<string,object>)Json.At(pendingCanonical,"data");
+        var localizedData=(System.Collections.Generic.Dictionary<string,object>)Json.At(pendingLocalized,"data");
+        canonicalData["data"]="<p>Dear Endministrator.</p><p>Maintenance hours: TBA.</p><p>New version [Meeting You in the World o'Shrooms].</p>";
+        localizedData["data"]="<p>Уважаемый Эндминистратор.</p><p>Часы технического обслуживания будут объявлены позже.</p><p>Новая версия «Встретимся в грибном краю».</p>";
+        using(var fixture=new PreDownloadNoticeFixture(Json.Encode(pendingCanonical),Json.Encode(pendingLocalized)))
+        using(var http=new HttpClient(fixture)) {
+          var feed=await new BannerClient(http).FetchCalendar(null);
+          var pendingSource=feed.Sources.Single();
+          check(!feed.Partial && pendingSource.Undated && !pendingSource.MaintenanceUnreadable
+            && pendingSource.MaintenanceIdentity=="meeting you in the world o'shrooms",
+            "Canonical pending maintenance wording survives the selected Russian article projection without a false read error");
+        }
         var broken=Json.Decode(translated);((System.Collections.Generic.Dictionary<string,object>)((System.Collections.Generic.Dictionary<string,object>)broken)["data"])["data"]="<p>Incomplete translation<br>One short line</p>";
         bool refused=false;try{LocalizedArticles.Project(Json.Decode(canonical),broken);}catch(FormatException){refused=true;}
         check(refused,"An actually incomplete translation is still rejected when the canonical article uses line breaks");

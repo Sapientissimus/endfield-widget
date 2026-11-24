@@ -92,7 +92,11 @@ namespace EndfieldWidget {
           displayOverride=new List<DisplayArea>{screenA,screenB};ApplyLayout(true);window.UpdateLayout();
           check(window.Left<0,"The same WPF window returns when its preferred monitor reappears");
           displayOverride=primaryDisplay;config.MonitorId=screenA.Id;config.MonitorX=.7;config.MonitorY=.2;ApplyLayout(true);window.UpdateLayout();
-          window.Left=-10000;window.Top=-10000;
+          Keyboard.ClearFocus();
+          window.Left = window.Top = -10000;
+          await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle);
+          window.UpdateLayout();
+          check(!window.IsMouseOver && !window.IsKeyboardFocusWithin,"The idle controls are checked after mouse and keyboard focus leave the widget");
           check(Find<Button>("CloseButton").Opacity==0 && !Find<Button>("CloseButton").IsHitTestVisible,"Chrome is hidden and cannot intercept clicks while the pointer is away");
           SaveImage(window,Path.Combine(folder,"widget-full.png"));
           dialog=SettingsWindow();dialog.WindowStartupLocation=WindowStartupLocation.Manual;dialog.Left=-10000;dialog.Top=-10000;dialog.Show();dialog.UpdateLayout();
@@ -232,13 +236,16 @@ namespace EndfieldWidget {
     }
   }
   sealed class MissingArtFixture:HttpMessageHandler {
+    readonly DateTimeOffset published = DateTimeOffset.UtcNow;
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken cancellation) {
       string body;
-      long published=DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-      if(request.RequestUri.AbsolutePath=="/api/bulletin")body=Json.Encode(new {code=0,data=new {total=1,list=new[]{new {cid="9999",title="[Fixture] Chartered Headhunting",displayTime=published}}}});
+      if(request.RequestUri.AbsolutePath=="/api/bulletin")body=Json.Encode(new {code=0,data=new {total=1,list=new[]{new {cid="9999",title="[Fixture] Chartered Headhunting",displayTime=published.ToUnixTimeSeconds()}}}});
       else if(request.RequestUri.AbsolutePath=="/api/bulletin/9999") {
-        string date=DateTimeOffset.UtcNow.AddDays(1).ToString("MMM. d, yyyy 'at' HH:mm",CultureInfo.InvariantCulture);
-        body=Json.Encode(new {code=0,data=new {data="<p>[Fixture] Chartered Headhunting features the Rate-UP 6★ operator [New fixture].</p><p>Availability:</p><p>Americas / Europe Server: "+date+" – Nov. 30, 2026 at 11:59 (server time)</p>"}});
+        const string format = "MMM. d, yyyy 'at' HH:mm";
+        var start = published.ToOffset(TimeSpan.FromHours(-5)).AddDays(1);
+        string period = start.ToString(format, CultureInfo.InvariantCulture) + " – "
+          + start.AddDays(14).ToString(format, CultureInfo.InvariantCulture);
+        body=Json.Encode(new {code=0,data=new {data="<p>[Fixture] Chartered Headhunting features the Rate-UP 6★ operator [New fixture].</p><p>Availability:</p><p>Americas / Europe Server: "+period+" (server time)</p>"}});
       } else body="<html>Catalogue temporarily unavailable</html>";
       return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(body,Encoding.UTF8,"application/json")});
     }

@@ -2,13 +2,13 @@
 
 A Windows desktop companion for **Arknights: Endfield**. Version **1.3.1**.
 
-View Sanity, upcoming events and official announcements without opening the game. The widget stays on the desktop, adapts its colors to the featured operator and displays event times in the Windows time zone.
+View Sanity, upcoming events and official announcements without opening the game. The widget pairs graphite panels with the featured operator's portrait and accent color. Event times follow the Windows time zone.
 
 [Download for Windows](https://github.com/Sapientissimus/endfield-widget/releases/latest)
 
 ## Preview
 
-Actual application views in English with sample account and event data. Click a screenshot to view it at full size.
+English screenshots with sample account data and events from official announcements. Click a screenshot to view it at full size.
 
 <table>
 <tr>
@@ -36,7 +36,7 @@ Actual application views in English with sample account and event data. Click a 
 
 <a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" width="460" alt="Settings with language and server selection, SKPORT account connection and game launch options"></a>
 
-**Tray menu** — quick actions with the widget's current color palette.
+**Tray menu** — quick access to the game, calendar and widget settings.
 
 <a href="docs/screenshots/tray.png"><img src="docs/screenshots/tray.png" width="248" alt="Dark tray menu with icons, separate shortcut hints and grouped widget actions"></a>
 

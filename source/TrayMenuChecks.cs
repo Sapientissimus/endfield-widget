@@ -46,8 +46,16 @@ namespace EndfieldWidget {
           check(TrayAction(menu,"TraySettings").Text==L.T("Settings") && TrayAction(menu,"TrayClose").Text==L.T("Close"),"Tray actions use the selected interface language: "+choice.Code);
         }
         string previousLanguage=L.Code;L.Set(language);TranslateTray(menu.Items,previousLanguage);UpdateTrayPersonalization();UpdateGameLaunchControls();
-        var initial=menu.Palette.Accent;currentTheme=OperatorTheme.FromAccent(210,.5,190);ApplyDesignPreset();
-        check(menu.Palette.Accent!=initial && menu.Palette.Background.R==currentTheme.Background.R && menu.Palette.Background.G==currentTheme.Background.G,"An operator or style change updates the open tray's palette through the actual appearance path");
+        currentTheme=OperatorTheme.FromAccent(40,.5,65);ApplyDesignPreset();
+        var initial=menu.Palette.Accent;var initialBackground=menu.Palette.Background;var initialText=menu.Palette.Text;var initialSelection=menu.Palette.Selection;
+        currentTheme=OperatorTheme.FromAccent(210,.5,190);ApplyDesignPreset();
+        check(menu.Palette.Accent!=initial && menu.Palette.Background==initialBackground && menu.Palette.Text==initialText
+          && menu.Palette.Background.R==currentTheme.Card.R && menu.Palette.Background.G==currentTheme.Card.G
+          && menu.Palette.Background.B==currentTheme.Card.B,
+          "The actual tray keeps its neutral panel and text while operator actions adopt a different accent");
+        check(menu.Palette.Selection!=initialSelection && menu.Palette.Selection!=menu.Palette.Background
+          && OperatorTheme.Contrast(currentTheme.Text,currentTheme.Selection)>=4.5,
+          "The native tray selection carries the changed operator accent with readable text");
         TrayAction(menu,"TraySettings").Select();SaveTrayMenu(menu,Path.Combine(folder,"tray-menu-blue-selected.png"));
         menu.ApplyTheme(currentTheme,window.Resources,true);check(menu.Palette.HighContrast && menu.Palette.Background==SystemColors.Menu && menu.Palette.Selection==SystemColors.Highlight && menu.Palette.SelectedText==SystemColors.HighlightText,"High Contrast uses the Windows menu and selection colors instead of forcing the operator palette");
         SaveTrayMenu(menu,Path.Combine(folder,"tray-menu-high-contrast.png"));menu.ApplyTheme(currentTheme,window.Resources,false);

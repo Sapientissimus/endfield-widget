@@ -76,11 +76,11 @@ namespace EndfieldWidget {
       Find<TextBlock>("NextBannerSummary").Visibility=config.ShowNextDebut?Visibility.Visible:Visibility.Collapsed;
       double text=Math.Max(1,config.TextScale);
       double fullSanity=CardHeight("FullSanityCard","FullSanityLayout",370),fullUpdate=updateBlockVisible?CardHeight("FullUpdateCard","FullUpdateLayout",370):0,fullNext=config.ShowNextDebut?CardHeight("UpcomingCard","FullUpcomingLayout",370):0;
-      double compactSanity=ContentHeight("CompactSanityLayout",318),compactUpdate=updateBlockVisible?CardHeight("CompactUpdateCard","CompactUpdateLayout",318):0,compactNext=config.ShowNextDebut?ContentHeight("NextBannerSummary",318):0;
-      double fullHeight=264+fullSanity+fullUpdate+fullNext+text*((config.ShowPlayButton?53:0)+35),compactHeight=42+text*(52+29)+compactSanity+compactUpdate+compactNext;
+      double compactSanity=CardHeight("CompactSanityCard","CompactSanityLayout",318),compactUpdate=updateBlockVisible?CardHeight("CompactUpdateCard","CompactUpdateLayout",318):0,compactNext=config.ShowNextDebut?CardHeight("CompactUpcomingCategory","NextBannerSummary",318):0;
+      double fullHeight=264+fullSanity+fullUpdate+fullNext+text*((config.ShowPlayButton?53:0)+35),compactHeight=42+text*(84+29)+compactSanity+compactUpdate+compactNext;
       double baseWidth=config.MicroMode || config.Compact?360:420,baseHeight=config.MicroMode?Math.Max(66*text,ContentHeight("MicroDragHandle",322)+32):config.Compact?compactHeight:fullHeight;
       var fullRows=Find<Grid>("FullContent").RowDefinitions;fullRows[1].Height=new GridLength(fullSanity);fullRows[5].Height=new GridLength(35*text);
-      var compactRows=((Grid)Find<Border>("CompactView").Child).RowDefinitions;compactRows[0].Height=new GridLength(52*text);compactRows[1].Height=new GridLength(compactSanity);compactRows[4].Height=new GridLength(29*text);
+      var compactRows=((Grid)Find<Border>("CompactView").Child).RowDefinitions;compactRows[0].Height=new GridLength(84*text);compactRows[1].Height=new GridLength(compactSanity);compactRows[4].Height=new GridLength(29*text);
       var pixel=PixelScale();var screens=CurrentDisplays();var target=Placement.Preferred(config,screens);
       IntPtr handle=new WindowInteropHelper(window).Handle;DesktopNative.Rectangle bounds;
       var position=new Point(window.Left*pixel.X,window.Top*pixel.Y);
@@ -100,7 +100,7 @@ namespace EndfieldWidget {
       Find<Button>("PlayButton").Visibility=config.ShowPlayButton?Visibility.Visible:Visibility.Collapsed;
       Find<Button>("CompactPlayButton").Visibility=config.ShowPlayButton?Visibility.Visible:Visibility.Collapsed;
       Find<Button>("MicroPlayButton").Visibility=config.ShowPlayButton?Visibility.Visible:Visibility.Collapsed;
-      double radius=config.DesignPreset=="strict"?3:config.DesignPreset=="minimal"?8:17;
+      double radius=Math.Max(0,Find<Border>("FullView").CornerRadius.TopLeft-1);
       ((Grid)Find<Border>("FullView").Child).Clip=new RectangleGeometry(new Rect(0,0,406,fullHeight-14),radius,radius);
       double fit=Math.Min((target.Work.Width-2*config.EdgeMarginX)/(baseWidth*pixel.X),(target.Work.Height-2*config.EdgeMarginY)/(baseHeight*pixel.Y));
       double scale=Math.Min(config.MicroMode?config.MicroScale:config.Compact?config.CompactScale:config.Scale,Math.Max(.25,fit));
@@ -135,12 +135,12 @@ namespace EndfieldWidget {
       window.Dispatcher.BeginInvoke(new Action(()=>{if(!extrasDisposed){displayChangeTimer.Stop();displayChangeTimer.Start();}}));
     }
     void ApplyBackgroundOpacity() {
-      foreach(string name in new[]{"Background","Raised","Card"}) {
+      foreach(string name in new[]{"Background","Raised","Card","Sanity"}) {
         var original=window.Resources["Theme"+name+"Brush"] as SolidColorBrush;if(original==null)continue;
         var color=original.Color;color.A=(byte)Math.Round(color.A*config.BackgroundOpacity);
         var brush=new SolidColorBrush(color);brush.Freeze();window.Resources["Widget"+name+"Brush"]=brush;
       }
-      foreach(string name in new[]{"Background","Glow","Fade","Shade","Clear"}) {
+      foreach(string name in new[]{"Background","Glow","SecondaryGlow","Fade","Shade","Clear"}) {
         object original=window.Resources["Theme"+name+"Color"];if(!(original is Color))continue;
         var color=(Color)original;color.A=(byte)Math.Round(color.A*config.BackgroundOpacity);window.Resources["Widget"+name+"Color"]=color;
       }

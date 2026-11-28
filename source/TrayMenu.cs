@@ -15,15 +15,15 @@ namespace EndfieldWidget {
     }
     public static TrayMenuPalette Create(OperatorTheme theme,System.Windows.ResourceDictionary resources,bool highContrast) {
       if(highContrast)return new TrayMenuPalette{Background=SystemColors.Menu,Text=SystemColors.MenuText,Muted=SystemColors.GrayText,Accent=SystemColors.MenuText,Selection=SystemColors.Highlight,SelectedText=SystemColors.HighlightText,Border=SystemColors.WindowFrame,HighContrast=true};
-      return new TrayMenuPalette{Background=Resource(resources,"ThemeBackgroundBrush",theme.Background),Text=Convert(theme.Text),Muted=Convert(theme.Muted),Accent=Convert(theme.Accent),Selection=Resource(resources,"ThemeSelectionBrush",theme.Selection),SelectedText=Convert(theme.Text),Border=Convert(theme.Border)};
+      return new TrayMenuPalette{Background=Resource(resources,"ThemeCardBrush",theme.Card),Text=Convert(theme.Text),Muted=Convert(theme.Muted),Accent=Convert(theme.Accent),Selection=Resource(resources,"ThemeSelectionBrush",theme.Selection),SelectedText=Convert(theme.Text),Border=Convert(theme.Border)};
     }
   }
 
   sealed class TrayMenuRenderer:Forms.ToolStripRenderer {
     internal TrayMenuPalette Palette;
-    readonly Font headerFont;
+    const int LabelInset = 34, EndInset = 12;
     readonly float scale;
-    public TrayMenuRenderer(float scale,Font headerFont){this.scale=scale;this.headerFont=headerFont;}
+    public TrayMenuRenderer(float scale){this.scale=scale;}
     int S(float value){return Math.Max(1,(int)Math.Round(value*scale));}
     static GraphicsPath Rounded(Rectangle rectangle,int radius) {
       int diameter=Math.Min(radius*2,Math.Min(rectangle.Width,rectangle.Height));var path=new GraphicsPath();
@@ -33,7 +33,14 @@ namespace EndfieldWidget {
       e.Graphics.Clear(Palette.Background);
     }
     protected override void OnRenderToolStripBorder(Forms.ToolStripRenderEventArgs e) {
-      using(var border=new Pen(Palette.Border))e.Graphics.DrawRectangle(border,0,0,e.ToolStrip.Width-1,e.ToolStrip.Height-1);
+      using (var border = new Pen(Palette.Border)) {
+        e.Graphics.DrawRectangle(border, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
+        var header = e.ToolStrip.Items["TrayHeader"];
+        if (header != null) {
+          int y = header.Bounds.Bottom - 1;
+          e.Graphics.DrawLine(border, S(10), y, e.ToolStrip.Width - S(10) - 1, y);
+        }
+      }
     }
     protected override void OnRenderImageMargin(Forms.ToolStripRenderEventArgs e) { }
     protected override void OnRenderMenuItemBackground(Forms.ToolStripItemRenderEventArgs e) {
@@ -43,27 +50,41 @@ namespace EndfieldWidget {
         if(Palette.HighContrast)e.Graphics.FillRectangle(fill,rectangle);
         else {var old=e.Graphics.SmoothingMode;e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var path=Rounded(rectangle,S(5)))e.Graphics.FillPath(fill,path);e.Graphics.SmoothingMode=old;}
       }
+      if(!Palette.HighContrast)using(var marker=new Pen(Palette.Accent,S(2)))
+        e.Graphics.DrawLine(marker,rectangle.Left+S(2),rectangle.Top+S(6),rectangle.Left+S(2),rectangle.Bottom-S(6));
     }
     protected override void OnRenderSeparator(Forms.ToolStripSeparatorRenderEventArgs e) {
       using(var line=new Pen(Palette.Border))e.Graphics.DrawLine(line,S(9),e.Item.Height/2,e.Item.Width-S(9),e.Item.Height/2);
     }
     protected override void OnRenderItemText(Forms.ToolStripItemTextRenderEventArgs e) {
       if(e.Item.Name=="TrayHeader") {
-        var bounds=new Rectangle(S(2),0,Math.Max(1,e.Item.Width-S(10)),Math.Max(1,e.Item.Height-S(3)));
-        Forms.TextRenderer.DrawText(e.Graphics,"ENDFIELD",headerFont,bounds,Palette.Accent,Forms.TextFormatFlags.Left|Forms.TextFormatFlags.VerticalCenter|Forms.TextFormatFlags.NoPadding);
-        Forms.TextRenderer.DrawText(e.Graphics,BuildInfo.Version,headerFont,bounds,Palette.Muted,Forms.TextFormatFlags.Right|Forms.TextFormatFlags.VerticalCenter|Forms.TextFormatFlags.NoPadding);
+        // ToolStripLabel starts after the native icon gutter. Menu items span it.
+        var actionRow = e.ToolStrip.Items["TrayVisibility"];
+        if (actionRow == null) return;
+        int left = Math.Max(0, actionRow.Bounds.Left + S(LabelInset) - e.Item.Bounds.Left);
+        int right = Math.Min(e.Item.Width, actionRow.Bounds.Right - S(EndInset) - e.Item.Bounds.Left);
+        var bounds = new Rectangle(left, 0, Math.Max(1, right - left), Math.Max(1, e.Item.Height - S(2)));
+        var headerFlags = Forms.TextFormatFlags.VerticalCenter | Forms.TextFormatFlags.SingleLine | Forms.TextFormatFlags.NoPadding;
+        Forms.TextRenderer.DrawText(e.Graphics, e.Item.Text, e.Item.Font, bounds, Palette.Text, headerFlags | Forms.TextFormatFlags.Left);
+        Forms.TextRenderer.DrawText(e.Graphics, BuildInfo.Version, actionRow.Font, bounds,
+          Palette.HighContrast ? Palette.Text : Palette.Muted, headerFlags | Forms.TextFormatFlags.Right);
         return;
       }
       var action=e.Item as Forms.ToolStripMenuItem;if(action==null || e.Text!=action.Text)return;
-      Color color=!action.Enabled?Palette.Muted:action.Selected?Palette.SelectedText:Palette.Text;
+      Color color=!action.Enabled?Palette.Muted:action.Selected?Palette.SelectedText:action.Name=="TrayPlay"?Palette.Accent:Palette.Text;
       string shortcut=action.ShowShortcutKeys?action.ShortcutKeyDisplayString:"";
       int shortcutWidth=string.IsNullOrEmpty(shortcut)?0:Forms.TextRenderer.MeasureText(e.Graphics,shortcut,action.Font).Width;
       var flags=Forms.TextFormatFlags.VerticalCenter|Forms.TextFormatFlags.SingleLine|Forms.TextFormatFlags.NoPadding|Forms.TextFormatFlags.NoPrefix;
-      var labelBounds=new Rectangle(S(34),0,Math.Max(1,action.Width-S(48)-(shortcutWidth>0?shortcutWidth+S(20):0)),action.Height);
+      var labelBounds=new Rectangle(S(LabelInset),0,Math.Max(1,action.Width-S(48)-(shortcutWidth>0?shortcutWidth+S(20):0)),action.Height);
       Forms.TextRenderer.DrawText(e.Graphics,action.Text,action.Font,labelBounds,color,flags|Forms.TextFormatFlags.Left);
-      if(shortcutWidth>0)Forms.TextRenderer.DrawText(e.Graphics,shortcut,action.Font,new Rectangle(action.Width-S(12)-shortcutWidth,0,shortcutWidth,action.Height),action.Enabled && !action.Selected?Palette.Muted:color,flags|Forms.TextFormatFlags.Right);
+      if(shortcutWidth>0)Forms.TextRenderer.DrawText(e.Graphics,shortcut,action.Font,new Rectangle(action.Width-S(EndInset)-shortcutWidth,0,shortcutWidth,action.Height),action.Enabled && !action.Selected?Palette.Muted:color,flags|Forms.TextFormatFlags.Right);
     }
-    Color IconColor(Forms.ToolStripItem item){return !item.Enabled?Palette.Muted:item.Selected && Palette.HighContrast?Palette.SelectedText:Palette.Accent;}
+    Color IconColor(Forms.ToolStripItem item) {
+      if(!item.Enabled)return Palette.Muted;
+      if(item.Selected && Palette.HighContrast)return Palette.SelectedText;
+      var action=item as Forms.ToolStripMenuItem;
+      return item.Name=="TrayPlay" || action!=null && action.Checked?Palette.Accent:Palette.Text;
+    }
     protected override void OnRenderItemImage(Forms.ToolStripItemImageRenderEventArgs e) {
       var item=e.Item as Forms.ToolStripMenuItem;if(item==null || item.Checked)return;DrawIcon(e.Graphics,item.Name,IconBounds(item),IconColor(item));
     }
@@ -94,18 +115,18 @@ namespace EndfieldWidget {
   sealed class TrayMenu:Forms.ContextMenuStrip {
     readonly Bitmap iconSlot=new Bitmap(16,16,PixelFormat.Format32bppArgb);
     readonly Font menuFont=new Font("Segoe UI",9f,FontStyle.Regular,GraphicsUnit.Point);
-    readonly Font headerFont=new Font("Segoe UI",8f,FontStyle.Bold,GraphicsUnit.Point);
+    readonly Font headerFont=new Font("Segoe UI",10f,FontStyle.Bold,GraphicsUnit.Point);
     readonly TrayMenuRenderer themedRenderer;
     readonly float scale;
     bool arranging;
     static float ScreenScale(){using(var graphics=Graphics.FromHwnd(IntPtr.Zero))return graphics.DpiX/96f;}
     public TrayMenu():this(ScreenScale()) { }
     internal TrayMenu(float scale) {
-      this.scale=Math.Max(.75f,Math.Min(4,scale));themedRenderer=new TrayMenuRenderer(this.scale,headerFont);Renderer=themedRenderer;
+      this.scale=Math.Max(.75f,Math.Min(4,scale));themedRenderer=new TrayMenuRenderer(this.scale);Renderer=themedRenderer;
       Font=menuFont;ShowImageMargin=true;ShowCheckMargin=false;ShowItemToolTips=true;AutoClose=true;AccessibleName="Endfield";
       AutoSize=false;Padding=new Forms.Padding(S(6));MinimumSize=new Size(S(248),0);ImageScalingSize=new Size(S(16),S(16));
       ItemAdded+=(s,e)=>{var item=e.Item as Forms.ToolStripMenuItem;if(item!=null){item.Image=iconSlot;item.Padding=new Forms.Padding(S(4),0,S(10),0);item.ShowShortcutKeys=true;item.ShortcutKeys=Forms.Keys.None;}e.Item.TextChanged+=(sender,args)=>Reflow();Reflow();};
-      Items.Add(new Forms.ToolStripLabel("ENDFIELD"){Name="TrayHeader",Font=headerFont,AccessibleRole=Forms.AccessibleRole.StaticText});
+      Items.Add(new Forms.ToolStripLabel("ENDFIELD"){Name="TrayHeader",Font=headerFont,AccessibleName="Endfield "+BuildInfo.Version,AccessibleRole=Forms.AccessibleRole.StaticText});
     }
     int S(float value){return Math.Max(1,(int)Math.Round(value*scale));}
     internal TrayMenuPalette Palette {get{return themedRenderer.Palette;}}
@@ -115,7 +136,7 @@ namespace EndfieldWidget {
         int label=0,shortcut=0;
         foreach(Forms.ToolStripItem item in Items){var action=item as Forms.ToolStripMenuItem;if(action==null)continue;label=Math.Max(label,Forms.TextRenderer.MeasureText(action.Text,Font).Width);if(!string.IsNullOrEmpty(action.ShortcutKeyDisplayString))shortcut=Math.Max(shortcut,Forms.TextRenderer.MeasureText(action.ShortcutKeyDisplayString,Font).Width);}
         int width=Math.Max(S(248),S(56)+label+(shortcut>0?S(28)+shortcut:0)),height=Padding.Vertical;
-        foreach(Forms.ToolStripItem item in Items){int row=item.Name=="TrayHeader"?S(30):item is Forms.ToolStripSeparator?S(11):Math.Max(S(34),Math.Max(Font.Height,ImageScalingSize.Height)+S(12));item.AutoSize=false;item.Margin=Forms.Padding.Empty;item.Size=new Size(width-(item is Forms.ToolStripMenuItem?2:Padding.Horizontal),row);height+=row;}
+        foreach(Forms.ToolStripItem item in Items){int row=item.Name=="TrayHeader"?S(37):item is Forms.ToolStripSeparator?S(11):Math.Max(S(34),Math.Max(Font.Height,ImageScalingSize.Height)+S(12));item.AutoSize=false;item.Margin=Forms.Padding.Empty;item.Size=new Size(width-(item is Forms.ToolStripMenuItem?2:Padding.Horizontal),row);height+=row;}
         Size=new Size(width,height);
       }finally{ResumeLayout(true);arranging=false;}
     }

@@ -68,14 +68,17 @@
       </Grid></ControlTemplate></Setter.Value></Setter>
     </Style>
   </Window.Resources>
-  <Border Margin="8" CornerRadius="17" Background="{DynamicResource ThemeBackgroundBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1">
+  <Border Margin="8" CornerRadius="12" Background="{DynamicResource ThemeBackgroundBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1">
     <Grid Margin="22,20">
       <Grid.RowDefinitions><RowDefinition Height="68"/><RowDefinition Height="*"/><RowDefinition Height="59"/></Grid.RowDefinitions>
       <Grid x:Name="SettingsDragHandle" Background="Transparent">
-        <StackPanel>
-          <TextBlock Text="ENDFIELD" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource ThemeAccentBrush}"/>
-          <TextBlock Text="{DynamicResource Locale.74a883a037bc227f91891ab6}" FontSize="27" FontWeight="SemiBold" Margin="-1,7,0,0"/>
-        </StackPanel>
+        <Border BorderThickness="3,0,0,0" BorderBrush="{DynamicResource ThemeAccentBrush}" Padding="11,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,38,0">
+          <StackPanel>
+            <TextBlock Text="ENDFIELD" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource ThemeSecondaryTextBrush}"/>
+            <TextBlock Text="{DynamicResource Locale.74a883a037bc227f91891ab6}" FontSize="27" FontWeight="SemiBold" Margin="-1,7,0,0"/>
+          </StackPanel>
+        </Border>
+        <Border Height="1" Background="{DynamicResource ThemeBorderBrush}" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
         <Button x:Name="SettingsCloseButton" Width="30" Height="30" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="0" Background="{DynamicResource ThemeInputBrush}" ToolTip="{DynamicResource Locale.0ccfef82895026e2194c1ba7}" AutomationProperties.Name="{DynamicResource Locale.0ccfef82895026e2194c1ba7}">
           <Path Width="10" Height="10" Stretch="Uniform" Data="M0,0 L10,10 M10,0 L0,10" Stroke="{DynamicResource ThemeTextBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
         </Button>
@@ -84,18 +87,18 @@
         <StackPanel x:Name="SettingsSections">
           <Border x:Name="GameSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
             <StackPanel x:Name="GameSettingsPanel">
-              <StackPanel Orientation="Horizontal"><TextBlock Text="◈" FontSize="17" Foreground="{DynamicResource ThemeAccentBrush}" Margin="0,-1,8,0"/><TextBlock Text="{DynamicResource Locale.5c412a262086b9701cda0630}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+              <StackPanel Orientation="Horizontal"><TextBlock Text="◈" FontSize="17" Foreground="{DynamicResource ThemeSecondaryTextBrush}" Margin="0,-1,8,0"/><TextBlock Text="{DynamicResource Locale.5c412a262086b9701cda0630}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
               <TextBlock Text="{DynamicResource Locale.830ef117e1386dfc8c1c2220}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource ThemeMutedBrush}" Margin="0,12,0,6"/>
               <ComboBox x:Name="RegionSelector" Height="35" FontSize="12"/>
               <TextBlock x:Name="BannerCheckStatus" Visibility="Collapsed" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource ThemeSubtleBrush}" Margin="0,8,0,0"/>
             </StackPanel>
           </Border>
-          <Border x:Name="AccountSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+          <Border x:Name="AccountSettingsCard" CornerRadius="11" Background="{DynamicResource ThemeCardBrush}" BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="3,1,1,1" Padding="16" Margin="0,0,0,12">
             <StackPanel x:Name="AccountSettingsPanel">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Grid Margin="0,0,10,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="◎" FontSize="17" Foreground="{DynamicResource ThemeAccentBrush}" Margin="0,-1,8,0"/><TextBlock Grid.Column="1" Text="{DynamicResource Locale.017324d3fa0b5ec173188b26}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/></Grid>
-                <Border Grid.Column="1" HorizontalAlignment="Right" Background="{DynamicResource ThemeBadgeBrush}" CornerRadius="4" Padding="7,4" VerticalAlignment="Center"><TextBlock x:Name="AccountConnectionBadge" Text="{DynamicResource Locale.0303e182467081801f8b6148}" FontSize="9" Foreground="{DynamicResource ThemeMutedBrush}"/></Border>
+                <Grid Margin="0,0,10,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="◎" FontSize="17" Foreground="{DynamicResource ThemeSecondaryTextBrush}" Margin="0,-1,8,0"/><TextBlock Grid.Column="1" Text="{DynamicResource Locale.017324d3fa0b5ec173188b26}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/></Grid>
+                <Border Grid.Column="1" HorizontalAlignment="Right" Background="{DynamicResource ThemeBadgeBrush}" CornerRadius="4" Padding="7,4" VerticalAlignment="Center"><TextBlock x:Name="AccountConnectionBadge" Text="{DynamicResource Locale.0303e182467081801f8b6148}" FontSize="9" Foreground="{DynamicResource ThemeTextBrush}"/></Border>
               </Grid>
               <Button x:Name="OpenSkportButton" Content="{DynamicResource Locale.75c30e65c55708a859f822bb}" HorizontalAlignment="Left" FontSize="11" Padding="10,7" Margin="0,12,0,13"/>
               <TextBlock Text="{DynamicResource Locale.5ee3f7371586a03f13071aaa}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource ThemeMutedBrush}" Margin="0,0,0,6"/>
@@ -103,7 +106,7 @@
               <TextBlock x:Name="TokenHint" Visibility="Collapsed" FontSize="9" Foreground="{DynamicResource ThemeSubtleBrush}"/>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Button x:Name="ConnectAccountButton" Content="{DynamicResource Locale.f7d845186faa7ab8c4ab6029}" Background="{DynamicResource ThemeAccentBrush}" Foreground="{DynamicResource ThemeInkBrush}" FontWeight="SemiBold" FontSize="11" Height="35"/>
+                <Button x:Name="ConnectAccountButton" Content="{DynamicResource Locale.f7d845186faa7ab8c4ab6029}" BorderBrush="{DynamicResource ThemeAccentBrush}" FontWeight="SemiBold" FontSize="11" Height="35"/>
                 <Button x:Name="DisconnectAccountButton" Grid.Column="1" Content="{DynamicResource Locale.acfc5be785a9bb3da11c9f05}" FontSize="10" Height="35" Margin="8,0,0,0" Visibility="Collapsed"/>
               </Grid>
               <StackPanel x:Name="CharacterRow" Visibility="Collapsed" Margin="0,12,0,0">
@@ -170,7 +173,7 @@
       </ScrollViewer>
       <Grid Grid.Row="2" Margin="0,13,0,0">
         <TextBlock x:Name="SettingsFeedback" Visibility="Collapsed" MaxWidth="285" HorizontalAlignment="Left" VerticalAlignment="Center" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource ThemeSecondaryTextBrush}"/>
-        <Button x:Name="SettingsDoneButton" Content="{DynamicResource Locale.11a6767d5674c7e45f7e00dc}" Width="104" Height="36" FontSize="12" FontWeight="SemiBold" Background="{DynamicResource ThemeAccentBrush}" Foreground="{DynamicResource ThemeInkBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+        <Button x:Name="SettingsDoneButton" Content="{DynamicResource Locale.11a6767d5674c7e45f7e00dc}" Width="104" Height="36" FontSize="12" FontWeight="SemiBold" Background="{DynamicResource ThemeAccentBrush}" Foreground="{DynamicResource ThemeInkBrush}" BorderBrush="{DynamicResource ThemeAccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
       </Grid>
     </Grid>
   </Border>

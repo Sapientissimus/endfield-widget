@@ -408,7 +408,16 @@ namespace EndfieldWidget {
       object element;if(!namedElements.TryGetValue(name,out element)){element=window.FindName(name);if(element!=null)namedElements.Add(name,element);}
       return element as T;
     }
-    void Text(string name,string value) {var target=Find<TextBlock>(name);if(target.Text!=value){target.Text=value;if(IsCardText(name))cardLayoutDirty=true;}}
+    void Text(string name,string value) {
+      var label=Find<TextBlock>(name);
+      if(label.Text==value)return;
+      label.Text=value;
+      // The Viewbox and the explicitly measured cards can retain the previous
+      // layout slot after a live update grows a label.
+      var parent=label.Parent as UIElement;
+      if(parent!=null)parent.InvalidateMeasure();
+      if(IsCardText(name))cardLayoutDirty=true;
+    }
     public Widget(bool isPreview) {
       preview=isPreview;
       bannersVerified=preview;
@@ -478,9 +487,16 @@ namespace EndfieldWidget {
           if(settings.Owner!=null)throw new Exception("Settings must remain independent of desktop ownership");
           var original=BannerClient.Select(bannerState,DateTimeOffset.UtcNow,config.BannerRegion=="Asia");
           var alternate=BannerState.Seed().Debuts.First(d=>d.Name!=original.Name);
-          var beforeAccent=currentTheme.Accent;ApplyDebut(alternate);settings.UpdateLayout();
-          var settingsAccent=((SolidColorBrush)((Button)settings.FindName("ConnectAccountButton")).Background).Color;
-          if(beforeAccent==currentTheme.Accent || settingsAccent!=currentTheme.Accent)throw new Exception("Shared automatic palette did not update settings");
+          var connect=(Button)settings.FindName("ConnectAccountButton");
+          var beforeAccent=currentTheme.Accent;
+          var beforeFace=((SolidColorBrush)connect.Background).Color;
+          var beforePane=((SolidColorBrush)((Border)settings.FindName("AccountSettingsCard")).Background).Color;
+          ApplyDebut(alternate);settings.UpdateLayout();
+          var settingsAccent=((SolidColorBrush)connect.BorderBrush).Color;
+          if(beforeAccent==currentTheme.Accent || settingsAccent!=currentTheme.Accent
+            || ((SolidColorBrush)connect.Background).Color!=beforeFace
+            || ((SolidColorBrush)((Border)settings.FindName("AccountSettingsCard")).Background).Color!=beforePane)
+            throw new Exception("The operator accent did not update settings while retaining neutral control and panel surfaces");
           ApplyDebut(original);
           ((Expander)settings.FindName("TokenHelp")).IsExpanded=true;settings.UpdateLayout();
           var scroll=(ScrollViewer)settings.FindName("SettingsScroll");scroll.ScrollToBottom();settings.UpdateLayout();
@@ -659,7 +675,7 @@ namespace EndfieldWidget {
           using(var activation=!preview && !smoke?new InstanceActivation(InstanceActivation.Name):null) {
           var app=new Application {ShutdownMode=ShutdownMode.OnExplicitShutdown};
           var widget=new Widget(preview);if(activation!=null){activation.Bind(widget.RequestShowFromLauncher);widget.EnableCrashRecovery(Array.IndexOf(args,"--recovered")>=0);}
-          if(releaseTest)widget.ReleaseTest(args[1]);else if(localizationTest)widget.LocalizationTest(args[1]);else if(featureTest){if(args.Length>3 && args[3]=="calendar")widget.CalendarTest(args[1]);else if(args.Length>3 && args[3]=="tray")widget.TrayMenuTest(args[1]);else widget.FeatureTest(args[1]);}else if(featureView)widget.FeatureView(args[1],args.Length>3?args[3]:"");else if(desktopView)widget.DesktopView(args[1]);else if(desktopTest)widget.DesktopTest(args[1],args.Length>3?args[3]:null);else if(inputTest)widget.InputTest(args[1],args.Length>2?args[2]:null);else if(preview)widget.Capture(args[1],settingsPreview,args.Length>2?args[2]:null);else if(smoke)widget.SmokeTest(args[1]);else {widget.Run();if(automatic)widget.RecordAutomaticStartup();CrashRecovery.RuntimeStarted=true;}app.Run();
+          if(releaseTest)widget.ReleaseTest(args[1],args.Length>3 && args[3]=="gallery");else if(localizationTest)widget.LocalizationTest(args[1]);else if(featureTest){if(args.Length>3 && args[3]=="calendar")widget.CalendarTest(args[1]);else if(args.Length>3 && args[3]=="tray")widget.TrayMenuTest(args[1]);else widget.FeatureTest(args[1]);}else if(featureView)widget.FeatureView(args[1],args.Length>3?args[3]:"");else if(desktopView)widget.DesktopView(args[1]);else if(desktopTest)widget.DesktopTest(args[1],args.Length>3?args[3]:null);else if(inputTest)widget.InputTest(args[1],args.Length>2?args[2]:null);else if(preview)widget.Capture(args[1],settingsPreview,args.Length>2?args[2]:null);else if(smoke)widget.SmokeTest(args[1]);else {widget.Run();if(automatic)widget.RecordAutomaticStartup();CrashRecovery.RuntimeStarted=true;}app.Run();
           }
         }
       } catch(Exception ex) {

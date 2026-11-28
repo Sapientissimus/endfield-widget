@@ -7,9 +7,19 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 
 namespace EndfieldWidget {
   partial class Widget {
+    static bool TextFitsLayout(TextBlock label) {
+      var clip = LayoutInformation.GetLayoutClip(label);
+      if (clip == null) return true;
+      var bounds = clip.Bounds;
+      return bounds.Left <= 1 && bounds.Top <= 1 && bounds.Right + 1 >= label.RenderSize.Width
+        && bounds.Bottom + 1 >= label.RenderSize.Height;
+    }
+
     async Task CheckOperatorNameLayout(Action<bool,string> check,string folder) {
       string saved=Json.Encode(config),language=L.Code;var oldBanners=bannerState;
       try {
@@ -20,7 +30,7 @@ namespace EndfieldWidget {
           bannerState=new BannerState{Debuts=new List<Debut>{debut}};Paint();
           await window.Dispatcher.InvokeAsync(()=>{},System.Windows.Threading.DispatcherPriority.ContextIdle);
           var label=Find<System.Windows.Controls.TextBlock>("OperatorName");
-          check(label.Text==name.ToUpper(L.Culture) && label.ActualWidth+1>=label.DesiredSize.Width,"The rendered operator label contains the entire updated name at 120 percent text: "+name);
+          check(label.Text==name.ToUpper(L.Culture) && label.ActualWidth+1>=label.DesiredSize.Width && TextFitsLayout(label),"The rendered operator label contains the entire updated name at 120 percent text: "+name);
           SaveImage(window,Path.Combine(folder,"operator-name-"+(name=="Си"?"si":name=="Argent Flow"?"argent":"ru")+".png"));
         }
       }finally {

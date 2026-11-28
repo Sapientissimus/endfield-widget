@@ -2,6 +2,13 @@
 
 ## 1.3.1
 
+**Build 17 · Testing**
+
+- Light the portrait and tint the Sanity readout and Play action using colors from the featured operator. Settings and menus share the calendar's graphite surfaces.
+- Add a live Sanity meter to Micro. In Normal and Compact, maintenance times and upcoming debuts have distinct treatments with their calendar category colors.
+- Blend portrait edges into the header and keep compact artwork above the Sanity card. Align the tray menu title and version with the commands and shortcuts below.
+- Keep the full operator name and Sanity values visible when a live update replaces shorter text.
+
 **Build 16**
 
 - Show the build number in Settings under About.

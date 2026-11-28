@@ -35,22 +35,24 @@ namespace EndfieldWidget {
     }
     public static OperatorTheme FromAccent(double hue,double saturation,double secondaryHue) {
       var theme=new OperatorTheme {Hue=hue};
-      theme.Background=Hsv(hue,0.26,0.082);
-      theme.Card=Hsv(hue,0.23,0.137);
-      theme.Raised=Hsv(hue,0.22,0.177);
-      theme.Input=Hsv(hue,0.19,0.198);
-      theme.Border=Hsv(hue,0.18,0.30);
+      // Shared graphite surfaces match the calendar. Artwork contributes only
+      // the accents used by actions, progress and selected controls.
+      theme.Background=Color.FromRgb(24,24,25);
+      theme.Card=Color.FromRgb(36,36,38);
+      theme.Raised=Color.FromRgb(43,43,45);
+      theme.Input=Color.FromRgb(48,48,51);
+      theme.Border=Color.FromRgb(80,80,83);
       theme.Accent=Readable(Hsv(hue,Clamp(saturation,0.36,0.56),0.95),theme.Raised,5.0);
       theme.SecondaryAccent=Readable(Hsv(secondaryHue,0.35,0.90),theme.Raised,5.0);
-      theme.Text=Blend(Colors.White,theme.Accent,0.07);
-      theme.SecondaryText=Readable(Hsv(hue,0.08,0.83),theme.Raised,4.5);
-      theme.Muted=Readable(Hsv(hue,0.10,0.66),theme.Raised,4.5);
-      theme.Subtle=Readable(Hsv(hue,0.12,0.55),theme.Raised,4.5);
-      theme.Ink=Hsv(hue,0.24,0.092);
-      theme.Glow=Blend(theme.Background,Hsv(hue,0.45,0.45),0.85);
-      theme.Badge=Blend(theme.Raised,theme.Accent,0.15);
-      theme.Selection=Blend(theme.Input,theme.Accent,0.14);
-      theme.Track=Hsv(hue,0.16,0.285);
+      theme.Text=Color.FromRgb(243,240,236);
+      theme.SecondaryText=Color.FromRgb(221,216,209);
+      theme.Muted=Color.FromRgb(169,166,163);
+      theme.Subtle=Readable(Color.FromRgb(150,147,144),theme.Raised,4.5);
+      theme.Ink=Color.FromRgb(24,24,25);
+      theme.Glow=Blend(theme.Background,theme.Accent,0.52);
+      theme.Badge=Blend(theme.Raised,theme.Accent,0.28);
+      theme.Selection=Blend(theme.Input,theme.Accent,0.26);
+      theme.Track=Color.FromRgb(80,80,83);
       return theme;
     }
     public static OperatorTheme FromPortrait(BitmapSource image) {
@@ -101,13 +103,20 @@ namespace EndfieldWidget {
         {"ThemeInputBrush",Input},{"ThemeBorderBrush",Border},{"ThemeTextBrush",Text},
         {"ThemeSecondaryTextBrush",SecondaryText},{"ThemeMutedBrush",Muted},{"ThemeSubtleBrush",Subtle},
         {"ThemeAccentBrush",Accent},{"ThemeSecondaryAccentBrush",SecondaryAccent},
-        {"ThemeSoftAccentBrush",Blend(SecondaryText,Accent,0.30)},{"ThemeInkBrush",Ink},
+        {"ThemeSoftAccentBrush",SecondaryText},{"ThemeInkBrush",Ink},
         {"ThemeBadgeBrush",Badge},{"ThemeSelectionBrush",Selection},{"ThemeTrackBrush",Track},
-        {"ThemeChromeBrush",Alpha(Background,155)},{"ThemeWatermarkBrush",Alpha(Accent,13)},
-        {"ThemeLineBrush",Alpha(Accent,28)}
+        {"ThemeSanityBrush",Blend(Raised,Accent,0.20)},{"ThemeSanityBorderBrush",Blend(Border,Accent,0.48)},
+        {"ThemeReadingBrush",Readable(Accent,Blend(Raised,Accent,0.20),4.5)},
+        {"ThemeChromeBrush",Alpha(Raised,220)},{"ThemeWatermarkBrush",Alpha(Text,7)},
+        {"ThemeLineBrush",Alpha(Text,15)}
       };
       foreach(var item in values)Brush(resources,item.Key,item.Value);
+      var meter=new LinearGradientBrush(Accent,SecondaryAccent,0);meter.Freeze();resources["ThemeMeterBrush"]=meter;
+      resources["ThemeMaintenanceBrush"]=CalendarPresentation.BrushFor(CalendarKind.Maintenance);
+      resources["ThemeDebutBrush"]=CalendarPresentation.BrushFor(CalendarKind.Debut);
       resources["ThemeBackgroundColor"]=Background;resources["ThemeGlowColor"]=Glow;
+      resources["ThemeSecondaryGlowColor"]=Blend(Background,SecondaryAccent,0.44);
+      resources["ThemeMaintenanceBadgeBrush"]=new SolidColorBrush(Blend(Card,((SolidColorBrush)CalendarPresentation.BrushFor(CalendarKind.Maintenance)).Color,.15));
       resources["ThemeClearColor"]=Alpha(Background,0);resources["ThemeFadeColor"]=Alpha(Background,240);
       resources["ThemeShadeColor"]=Alpha(Background,181);resources["ThemeAccentColor"]=Accent;
       resources["ThemeSecondaryAccentColor"]=SecondaryAccent;

@@ -2,7 +2,7 @@
 
 ## 1.3.1
 
-**Build 17 · Testing**
+**Build 17**
 
 - Light the portrait and tint the Sanity readout and Play action using colors from the featured operator. Settings and menus share the calendar's graphite surfaces.
 - Add a live Sanity meter to Micro. In Normal and Compact, maintenance times and upcoming debuts have distinct treatments with their calendar category colors.
